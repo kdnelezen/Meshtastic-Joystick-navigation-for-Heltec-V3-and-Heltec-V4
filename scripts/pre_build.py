@@ -5,7 +5,6 @@ Prints the active environment name so that operators can confirm
 which board variant is being compiled.
 """
 
-import os
 Import("env")  # noqa: F821  (PlatformIO injects this)
 
 
