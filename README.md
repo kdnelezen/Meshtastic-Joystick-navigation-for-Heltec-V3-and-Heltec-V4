@@ -130,8 +130,8 @@ The easiest way to flash your board — no software installation needed.
 ### Steps
 
 1. **Open the flash tool:**
-   Open [`flash_tool/index.html`](flash_tool/index.html) in Chrome/Edge.
-   *(Or serve it locally: `python3 -m http.server 8080` then visit `http://localhost:8080/flash_tool/`)*
+   Serve the repository locally, for example with `python3 -m http.server 8080`,
+   then open `http://localhost:8080/flash_tool/` in Chrome/Edge.
 
 2. **Select your board:** Click **Heltec V3** or **Heltec V4**.
 
@@ -148,7 +148,10 @@ The easiest way to flash your board — no software installation needed.
 - **Linux:** Driver is included in the kernel; add yourself to the `dialout` group:
   `sudo usermod -a -G dialout $USER` then log out/in.
 
-> **Note:** The web flash tool uses the pre-built firmware binaries in
+> **Note:** Web Serial requires a secure context, so opening `flash_tool/index.html`
+> directly via `file://` will not work.
+>
+> The web flash tool uses the pre-built firmware binaries in
 > `flash_tool/firmware/`. Build them with PlatformIO first (see next section)
 > or download release binaries from the [Releases page](../../releases).
 

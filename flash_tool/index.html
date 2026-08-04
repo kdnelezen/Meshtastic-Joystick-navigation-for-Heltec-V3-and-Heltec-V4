@@ -1773,7 +1773,7 @@ async function startFlash() {
           setProgress(40 + Math.round(pct * 0.55), `Writing… ${pct}%`);
         },
         calculateMD5Hash(image) {
-          return CryptoJS ? CryptoJS.MD5(CryptoJS.enc.Latin1.parse(image)).toString() : '';
+          return typeof CryptoJS !== 'undefined' ? CryptoJS.MD5(CryptoJS.enc.Latin1.parse(image)).toString() : '';
         },
       });
 
