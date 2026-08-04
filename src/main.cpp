@@ -14,8 +14,8 @@
  * This file:
  *  1. Configures the OLED and Vext power rail.
  *  2. Initialises the JoystickInput driver.
- *  3. Bridges joystick events into the Meshtastic InputBroker.
- *  4. Starts the Meshtastic mesh node.
+ *  3. Routes joystick events into the local demo navigation state.
+ *  4. Starts Meshtastic only when built with full firmware integration.
  *
  * Meshtastic firmware architecture overview
  * ──────────────────────────────────────────
