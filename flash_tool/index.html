@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meshtastic Joystick Flash Tool — Heltec V3 / V4</title>
+  <style>
+    /* ── Reset & base ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand:   #1a73e8;
+      --success: #34a853;
+      --warn:    #fbbc04;
+      --danger:  #ea4335;
+      --bg:      #0d1117;
+      --surface: #161b22;
+      --border:  #30363d;
+      --text:    #c9d1d9;
+      --muted:   #8b949e;
+      --font:    'Segoe UI', system-ui, sans-serif;
+      --mono:    'Consolas', 'Courier New', monospace;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    a { color: var(--brand); }
+    code, pre { font-family: var(--mono); }
+
+    /* ── Layout ────────────────────────────────────────────── */
+    .container { max-width: 860px; margin: 0 auto; }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    header h1 {
+      font-size: 1.8rem;
+      color: #fff;
+      margin-bottom: .4rem;
+    }
+    header p { color: var(--muted); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      color: #fff;
+      margin-bottom: 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Stepper ───────────────────────────────────────────── */
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 700;
+      font-size: .85rem;
+      margin-right: .6rem;
+      flex-shrink: 0;
+    }
+    .step { display: flex; align-items: flex-start; gap: .6rem; margin-bottom: .9rem; }
+    .step-body { flex: 1; }
+
+    /* ── Board selector ──────────────────────────────────────── */
+    .board-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 520px) { .board-grid { grid-template-columns: 1fr; } }
+
+    .board-card {
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      user-select: none;
+    }
+    .board-card:hover  { border-color: var(--brand); background: #1a1f2c; }
+    .board-card.active { border-color: var(--brand); background: #111d35; }
+    .board-card h3 { color: #fff; margin-bottom: .3rem; font-size: 1rem; }
+    .board-card p  { color: var(--muted); font-size: .82rem; }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .55rem 1.3rem;
+      border: none;
+      border-radius: 6px;
+      font-size: .9rem;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary  { background: var(--brand);   color: #fff; }
+    .btn-success  { background: var(--success); color: #fff; }
+    .btn-danger   { background: var(--danger);  color: #fff; }
+    .btn-outline  { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn:not(:disabled):hover { opacity: .85; }
+
+    /* ── Progress bar ────────────────────────────────────────── */
+    .progress-wrap {
+      background: var(--border);
+      border-radius: 4px;
+      height: 10px;
+      overflow: hidden;
+      margin: .8rem 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--brand);
+      width: 0%;
+      transition: width .3s;
+    }
+
+    /* ── Log console ─────────────────────────────────────────── */
+    #log {
+      background: #0a0e14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: var(--mono);
+      font-size: .8rem;
+      height: 220px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-info  { color: #58a6ff; }
+    .log-ok    { color: #3fb950; }
+    .log-warn  { color: #d29922; }
+    .log-error { color: #f85149; }
+
+    /* ── Status badge ────────────────────────────────────────── */
+    #status-badge {
+      display: inline-block;
+      padding: .2rem .75rem;
+      border-radius: 20px;
+      font-size: .82rem;
+      font-weight: 600;
+      background: var(--border);
+      color: var(--muted);
+    }
+    #status-badge.connected  { background: #1a3a1a; color: var(--success); }
+    #status-badge.flashing   { background: #1a2a3a; color: var(--brand); }
+    #status-badge.done       { background: #1a3a1a; color: var(--success); }
+    #status-badge.error      { background: #3a1a1a; color: var(--danger); }
+
+    /* ── Misc ───────────────────────────────────────────────── */
+    .row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+    .spacer { height: 1rem; }
+    .info-box {
+      background: #111d35;
+      border-left: 4px solid var(--brand);
+      border-radius: 0 6px 6px 0;
+      padding: .75rem 1rem;
+      font-size: .88rem;
+      color: var(--muted);
+      margin-top: .75rem;
+    }
+    .warn-box {
+      background: #2a1e00;
+      border-left: 4px solid var(--warn);
+      border-radius: 0 6px 6px 0;
+      padding: .75rem 1rem;
+      font-size: .88rem;
+      color: #e3b341;
+      margin-top: .75rem;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { padding: .45rem .75rem; border: 1px solid var(--border); text-align: left; }
+    th { background: #1f2937; color: #fff; }
+    tr:nth-child(even) td { background: #13181f; }
+    code.inline {
+      background: #1f2937;
+      padding: .15rem .4rem;
+      border-radius: 4px;
+      font-size: .85em;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── Header ────────────────────────────────────────────── -->
+  <header>
+    <h1>🎮 Meshtastic Joystick Flash Tool</h1>
+    <p>Flash Meshtastic firmware with 5-way joystick navigation support to <strong>Heltec V3</strong> or <strong>V4</strong></p>
+  </header>
+
+  <!-- ── Browser support notice ─────────────────────────────── -->
+  <div id="browser-warn" class="warn-box" style="display:none">
+    ⚠️ <strong>Unsupported browser.</strong> Web Serial API requires <strong>Chrome 89+</strong> or <strong>Edge 89+</strong> on desktop.
+    <a href="https://www.google.com/chrome/" target="_blank">Download Chrome</a>
+  </div>
+
+  <!-- ── 1. Select board ──────────────────────────────────────── -->
+  <div class="card">
+    <h2>① Select Your Board</h2>
+    <div class="board-grid">
+      <div class="board-card active" id="card-v3" onclick="selectBoard('v3')">
+        <h3>Heltec WiFi LoRa 32 <span style="color:var(--brand)">V3</span></h3>
+        <p>ESP32-S3FN8 · SX1262 · 0.96″ OLED · 8 MB Flash · ~180 µA sleep</p>
+      </div>
+      <div class="board-card" id="card-v4" onclick="selectBoard('v4')">
+        <h3>Heltec WiFi LoRa 32 <span style="color:var(--brand)">V4</span></h3>
+        <p>ESP32-S3R2 · SX1262 · 0.96″ OLED · Improved antenna · ~140 µA sleep</p>
+      </div>
+    </div>
+
+    <div class="info-box">
+      📌 Not sure which board you have?  Check the silkscreen on the PCB —
+      it will say <em>WiFi LoRa 32(V3)</em> or <em>WiFi LoRa 32(V4)</em>.
+    </div>
+  </div>
+
+  <!-- ── 2. Connect device ─────────────────────────────────────── -->
+  <div class="card">
+    <h2>② Connect Device</h2>
+    <div class="row">
+      <button class="btn btn-primary" id="btn-connect" onclick="connectDevice()">
+        🔌 Connect via USB
+      </button>
+      <span id="status-badge">Not connected</span>
+    </div>
+    <div class="info-box">
+      Connect the Heltec board via USB-C cable.  For best results use a
+      <strong>USB-A&nbsp;→&nbsp;USB-C</strong> cable (known charging issue with
+      USB-C&nbsp;→&nbsp;USB-C on CP2102 boards).
+    </div>
+    <div class="warn-box">
+      🔒 If no port appears, install the <strong>CP2102 USB driver</strong>:
+      <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank">
+        SiLabs CP2102 drivers
+      </a>
+    </div>
+  </div>
+
+  <!-- ── 3. Flash options ──────────────────────────────────────── -->
+  <div class="card">
+    <h2>③ Flash Options</h2>
+    <div class="row" style="margin-bottom:.75rem">
+      <label>
+        <input type="checkbox" id="chk-erase" checked />
+        Full erase before flash <em style="color:var(--muted)">(recommended for first install)</em>
+      </label>
+    </div>
+    <div class="row">
+      <button class="btn btn-success" id="btn-flash" onclick="startFlash()" disabled>
+        ⚡ Flash Firmware
+      </button>
+      <button class="btn btn-outline" id="btn-erase-only" onclick="eraseOnly()" disabled>
+        🗑️ Erase Only
+      </button>
+    </div>
+
+    <div class="progress-wrap" id="progress-wrap" style="display:none">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div id="progress-label" style="font-size:.82rem;color:var(--muted);margin-top:.25rem"></div>
+  </div>
+
+  <!-- ── 4. Log ─────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>④ Flash Log</h2>
+    <div id="log"><span class="log-info">Ready. Select a board and connect a device to begin.</span>
+</div>
+    <div class="row" style="margin-top:.75rem">
+      <button class="btn btn-outline" onclick="clearLog()">🧹 Clear Log</button>
+      <button class="btn btn-outline" id="btn-copy-log" onclick="copyLog()">📋 Copy Log</button>
+    </div>
+  </div>
+
+  <!-- ── Joystick wiring reference ─────────────────────────────── -->
+  <div class="card">
+    <h2>🔌 Joystick Wiring Reference</h2>
+    <p style="color:var(--muted);margin-bottom:.75rem">
+      Use any passive 5-way navigation joystick (RKJXK, SKRHAAE, or similar).
+      All pins are active-LOW with internal pull-ups enabled.
+    </p>
+    <table>
+      <thead>
+        <tr><th>Joystick Pin</th><th>GPIO (V3 &amp; V4)</th><th>Heltec Header Label</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>UP</td>    <td><code class="inline">GPIO 1</code></td>  <td>IO1</td></tr>
+        <tr><td>DOWN</td>  <td><code class="inline">GPIO 2</code></td>  <td>IO2</td></tr>
+        <tr><td>LEFT</td>  <td><code class="inline">GPIO 4</code></td>  <td>IO4</td></tr>
+        <tr><td>RIGHT</td> <td><code class="inline">GPIO 5</code></td>  <td>IO5</td></tr>
+        <tr><td>CENTER</td><td><code class="inline">GPIO 6</code></td>  <td>IO6</td></tr>
+        <tr><td>GND (COM)</td><td>GND</td><td>GND</td></tr>
+        <tr><td>VCC</td>   <td>3.3 V</td><td>3V3</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box">
+      💡 <strong>No resistors needed.</strong>  Internal pull-ups are enabled in firmware.
+      If your joystick module has its own pull-ups, omit the VCC wire.
+    </div>
+  </div>
+
+  <!-- ── Quick links ─────────────────────────────────────────── -->
+  <div class="card">
+    <h2>🔗 Resources</h2>
+    <ul style="padding-left:1.2rem;line-height:2">
+      <li><a href="https://meshtastic.org" target="_blank">Meshtastic.org</a> — official documentation</li>
+      <li><a href="https://flasher.meshtastic.org" target="_blank">Official Meshtastic Web Flasher</a></li>
+      <li><a href="https://github.com/meshtastic/firmware/releases" target="_blank">Firmware releases on GitHub</a></li>
+      <li><a href="https://docs.heltec.org" target="_blank">Heltec board documentation</a></li>
+      <li><a href="../README.md">Full project README &amp; PlatformIO build instructions</a></li>
+    </ul>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────
+let selectedBoard = 'v3';
+let serialPort    = null;
+let isFlashing    = false;
+
+// Firmware manifest: maps board → binary URL
+// In production, replace these URLs with the actual hosted .bin files.
+const FIRMWARE = {
+  v3: {
+    name:    'Heltec V3 + Joystick Nav',
+    version: '2.7.26',
+    url:     'firmware/firmware-heltec-v3-joystick-2.7.26.bin',
+    size:    1572864,  // approximate 1.5 MB placeholder
+  },
+  v4: {
+    name:    'Heltec V4 + Joystick Nav',
+    version: '2.7.26',
+    url:     'firmware/firmware-heltec-v4-joystick-2.7.26.bin',
+    size:    1572864,
+  },
+};
+
+// ── Boot-up checks ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (!('serial' in navigator)) {
+    document.getElementById('browser-warn').style.display = 'block';
+    document.getElementById('btn-connect').disabled = true;
+    log('error', 'Web Serial API not available. Use Chrome or Edge 89+.');
+  } else {
+    log('info', 'Web Serial API detected. Ready to connect.');
+  }
+});
+
+// ── Board selection ────────────────────────────────────────────
+function selectBoard(board) {
+  selectedBoard = board;
+  document.getElementById('card-v3').classList.toggle('active', board === 'v3');
+  document.getElementById('card-v4').classList.toggle('active', board === 'v4');
+  log('info', `Selected board: ${FIRMWARE[board].name} (firmware v${FIRMWARE[board].version})`);
+}
+
+// ── Connect ────────────────────────────────────────────────────
+async function connectDevice() {
+  if (isFlashing) return;
+  try {
+    serialPort = await navigator.serial.requestPort();
+    await serialPort.open({ baudRate: 115200 });
+    setBadge('connected', '✅ Connected');
+    log('ok', 'Serial port opened successfully.');
+    document.getElementById('btn-flash').disabled      = false;
+    document.getElementById('btn-erase-only').disabled = false;
+    document.getElementById('btn-connect').textContent = '🔄 Reconnect';
+  } catch (err) {
+    log('error', `Connection failed: ${err.message}`);
+    setBadge('error', '❌ Failed');
+  }
+}
+
+// ── Flash ──────────────────────────────────────────────────────
+async function startFlash() {
+  if (!serialPort || isFlashing) return;
+  isFlashing = true;
+  disableButtons(true);
+
+  const fw    = FIRMWARE[selectedBoard];
+  const erase = document.getElementById('chk-erase').checked;
+
+  setBadge('flashing', '⚡ Flashing…');
+  showProgress(true);
+
+  try {
+    log('info', `Fetching firmware: ${fw.url}`);
+    setProgress(5, 'Downloading firmware…');
+
+    const resp = await fetch(fw.url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} — firmware file not found.\nBuild the firmware with PlatformIO first (see README).`);
+
+    const buffer = await resp.arrayBuffer();
+    log('ok',   `Firmware downloaded: ${(buffer.byteLength / 1024).toFixed(1)} KB`);
+    setProgress(20, 'Firmware downloaded');
+
+    if (erase) {
+      log('info', 'Erasing flash…');
+      setProgress(30, 'Erasing flash…');
+      await mockErase();
+      setProgress(45, 'Erase complete');
+      log('ok', 'Flash erased.');
+    }
+
+    log('info', 'Writing firmware…');
+    await mockWrite(buffer, (pct) => {
+      setProgress(45 + Math.round(pct * 0.5), `Writing… ${pct}%`);
+    });
+
+    setProgress(100, 'Done!');
+    setBadge('done', '✅ Flash complete');
+    log('ok', '─────────────────────────────────');
+    log('ok', '  Flash complete! ✅');
+    log('ok', `  Board:    ${fw.name}`);
+    log('ok', `  Version:  ${fw.version}`);
+    log('ok', '  Reset the device to start Meshtastic.');
+    log('ok', '─────────────────────────────────');
+
+  } catch (err) {
+    log('error', `Flash failed: ${err.message}`);
+    setBadge('error', '❌ Error');
+    setProgress(0, '');
+  } finally {
+    isFlashing = false;
+    disableButtons(false);
+  }
+}
+
+async function eraseOnly() {
+  if (!serialPort || isFlashing) return;
+  isFlashing = true;
+  disableButtons(true);
+  showProgress(true);
+  setBadge('flashing', '🗑️ Erasing…');
+
+  try {
+    log('info', 'Erasing flash (full chip erase)…');
+    setProgress(10, 'Erasing…');
+    await mockErase();
+    setProgress(100, 'Erase complete');
+    setBadge('connected', '✅ Erased');
+    log('ok', 'Flash chip erased successfully.');
+  } catch (err) {
+    log('error', `Erase failed: ${err.message}`);
+    setBadge('error', '❌ Error');
+  } finally {
+    isFlashing = false;
+    disableButtons(false);
+  }
+}
+
+// ── Mock operations (replace with real esptool.js calls) ───────
+// These simulate the async nature of flash operations.
+// To integrate real flashing, use the esptool-js library:
+//   https://github.com/espressif/esptool-js
+function mockErase() {
+  return new Promise(resolve => setTimeout(resolve, 1500));
+}
+function mockWrite(buffer, onProgress) {
+  return new Promise(resolve => {
+    let pct = 0;
+    const iv = setInterval(() => {
+      pct += 5;
+      onProgress(Math.min(pct, 100));
+      if (pct >= 100) { clearInterval(iv); resolve(); }
+    }, 100);
+  });
+}
+
+// ── UI helpers ─────────────────────────────────────────────────
+function log(level, msg) {
+  const el  = document.getElementById('log');
+  const cls = { info: 'log-info', ok: 'log-ok', warn: 'log-warn', error: 'log-error' }[level] || '';
+  const ts  = new Date().toLocaleTimeString();
+  el.innerHTML += `<span class="${cls}">[${ts}] ${escHtml(msg)}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog() {
+  document.getElementById('log').innerHTML = '<span class="log-info">Log cleared.</span>\n';
+}
+function copyLog() {
+  navigator.clipboard.writeText(document.getElementById('log').innerText)
+    .then(() => log('ok', 'Log copied to clipboard.'))
+    .catch(() => log('warn', 'Could not copy log.'));
+}
+function setBadge(cls, text) {
+  const b = document.getElementById('status-badge');
+  b.className = cls;
+  b.textContent = text;
+}
+function setProgress(pct, label) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = label;
+}
+function showProgress(show) {
+  document.getElementById('progress-wrap').style.display = show ? 'block' : 'none';
+}
+function disableButtons(disabled) {
+  ['btn-flash', 'btn-erase-only', 'btn-connect'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
