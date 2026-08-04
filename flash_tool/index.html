@@ -365,42 +365,134 @@
       <h2>② Get Firmware</h2>
       <p style="color:var(--muted);margin-bottom:.75rem">
         The flash tool needs a compiled <code class="inline">.bin</code> file.
-        Choose one of the two options below:
+        Choose one of the two options below, then proceed to ③ Connect.
       </p>
 
-      <h3>Option A — Download pre-built binary (easiest)</h3>
-      <p>Download the latest release binary from the GitHub Releases page and place it in
-        <code class="inline">flash_tool/firmware/</code>:</p>
-      <div class="row mt">
-        <a class="btn btn-outline" href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4/releases" target="_blank">
-          📦 GitHub Releases →
-        </a>
+      <h3>Option A — Download pre-built binary <em style="color:var(--success);font-weight:normal">(easiest — no software needed)</em></h3>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p>Go to the GitHub Releases page and download the <code class="inline">.bin</code> for your board:</p>
+          <div class="row mt">
+            <a class="btn btn-outline" href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4/releases" target="_blank">
+              📦 Open GitHub Releases →
+            </a>
+          </div>
+          <ul class="instr mt" style="color:var(--muted)">
+            <li>For Heltec <strong>V3</strong>: download <code class="inline">firmware-heltec-v3-joystick-2.7.26.bin</code></li>
+            <li>For Heltec <strong>V4</strong>: download <code class="inline">firmware-heltec-v4-joystick-2.7.26.bin</code></li>
+          </ul>
+        </div>
       </div>
-      <ul class="instr mt" style="color:var(--muted)">
-        <li>Download <code class="inline">firmware-heltec-v3-joystick-2.7.26.bin</code> for V3</li>
-        <li>Download <code class="inline">firmware-heltec-v4-joystick-2.7.26.bin</code> for V4</li>
-        <li>Place the file(s) in the <code class="inline">flash_tool/firmware/</code> folder next to this page</li>
-      </ul>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p>Place the downloaded file in the <code class="inline">flash_tool/firmware/</code> folder
+            (same folder as this <code class="inline">index.html</code>), keeping the exact filename.</p>
+          <div class="info-box">
+            📁 Expected path: <code class="inline">flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin</code>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p>Skip to <strong>③ Connect Device</strong> below. You're ready to flash.</p>
+        </div>
+      </div>
 
-      <h3>Option B — Build from source (PlatformIO)</h3>
-      <pre class="cmd"># Install PlatformIO (one time)
-pip install platformio
+      <h3 style="margin-top:1.25rem">Option B — Build from source with PlatformIO <em style="color:var(--muted);font-weight:normal">(full control)</em></h3>
+      <p style="color:var(--muted);margin-bottom:.75rem">
+        For detailed OS-specific instructions for all three build steps, open the
+        <button class="btn btn-outline" style="padding:.2rem .7rem;font-size:.82rem" onclick="switchTab('tab-guide', document.querySelectorAll('.tab-btn')[1])">📖 Full Instructions tab</button>
+        and go to <strong>Section 5 — Get the Firmware → Option B</strong>.
+        The quick version is below:
+      </p>
 
-# Clone the repo
+      <!-- STEP 1 -->
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p class="step-title">Install tools</p>
+          <p><strong>Windows:</strong> Install <a href="https://www.python.org/downloads/windows/" target="_blank">Python 3.8+</a>
+            (check "Add to PATH" during install), then open <strong>Command Prompt</strong> or <strong>PowerShell</strong>:</p>
+          <pre class="cmd">pip install platformio
 git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
-cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4
+cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <p class="mt"><strong>macOS:</strong> Install <a href="https://brew.sh" target="_blank">Homebrew</a> first if needed, then in Terminal:</p>
+          <pre class="cmd">brew install python git
+pip3 install platformio
+git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
+cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <p class="mt"><strong>Linux (Debian/Ubuntu):</strong></p>
+          <pre class="cmd">sudo apt update && sudo apt install -y python3 python3-pip git
+pip3 install platformio
+git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
+cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <div class="info-box">
+            ✅ Verify installation: <code class="inline">pio --version</code> should print
+            <code class="inline">PlatformIO Core, version 6.x.x</code>
+          </div>
+        </div>
+      </div>
 
-# Build for your board
-pio run -e heltec_v3_joystick    # Heltec V3
-pio run -e heltec_v4_joystick    # Heltec V4
+      <!-- STEP 2 -->
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p class="step-title">Build the firmware</p>
+          <p>Run one command for your board. PlatformIO will automatically download all library
+            dependencies (Meshtastic, Heltec BSP, Adafruit SSD1306, etc.) on first run —
+            this may take 2–5 minutes with a good internet connection.</p>
+          <pre class="cmd"># For Heltec V3:
+pio run -e heltec_v3_joystick
 
-# Copy output to flash_tool/firmware/
+# For Heltec V4:
+pio run -e heltec_v4_joystick</pre>
+          <p class="mt">Expected output when successful:</p>
+          <pre class="cmd" style="color:#3fb950">============================== [SUCCESS] Took 45.32 seconds ==============================</pre>
+          <div class="warn-box">
+            ⚠️ If you see <code class="inline">Error: Unknown board ID</code>, run
+            <code class="inline">pio pkg install</code> first to force a package refresh.
+            If you see a Python error, ensure Python 3.8+ is installed and
+            <code class="inline">pip install --upgrade platformio</code>.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p class="step-title">Copy the binary to <code class="inline">flash_tool/firmware/</code></p>
+          <p><strong>Windows (PowerShell):</strong></p>
+          <pre class="cmd"># V3
+Copy-Item .pio\build\heltec_v3_joystick\firmware.bin `
+  flash_tool\firmware\firmware-heltec-v3-joystick-2.7.26.bin
+
+# V4
+Copy-Item .pio\build\heltec_v4_joystick\firmware.bin `
+  flash_tool\firmware\firmware-heltec-v4-joystick-2.7.26.bin</pre>
+          <p class="mt"><strong>macOS / Linux:</strong></p>
+          <pre class="cmd"># V3
 cp .pio/build/heltec_v3_joystick/firmware.bin \
-   flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin</pre>
+   flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin
+
+# V4
+cp .pio/build/heltec_v4_joystick/firmware.bin \
+   flash_tool/firmware/firmware-heltec-v4-joystick-2.7.26.bin</pre>
+          <div class="success-box">
+            ✅ After copying, the file should be at:<br>
+            <code class="inline">flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin</code><br>
+            You are now ready to flash — proceed to ③ Connect Device.
+          </div>
+        </div>
+      </div>
+
       <div class="warn-box">
-        ⚠️ The flash buttons below are <strong>disabled until a firmware binary is present</strong>
-        at the expected path (e.g. <code class="inline">firmware/firmware-heltec-v3-joystick-2.7.26.bin</code>).
-        The tool checks for the file automatically when you click Flash Firmware.
+        ⚠️ The Flash Firmware button is <strong>disabled until a firmware binary is present</strong>
+        at the expected path. The tool checks for the file when you click Flash Firmware and will
+        show an error in the log if the file is missing.
       </div>
     </div>
 
@@ -663,52 +755,299 @@ cp .pio/build/heltec_v3_joystick/firmware.bin \
     <div class="card" id="g-firmware">
       <h2>5 · Get the Firmware</h2>
 
-      <h3>Option A — Pre-built Release (recommended for most users)</h3>
+      <h3>Option A — Pre-built Release <em style="color:var(--success);font-weight:normal">(recommended for most users)</em></h3>
       <div class="step">
         <span class="step-num">1</span>
         <div class="step-body">
-          <p>Go to the <a href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4/releases" target="_blank">GitHub Releases page →</a></p>
+          <p>Open the <a href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4/releases" target="_blank">GitHub Releases page →</a>
+            and find the latest release.</p>
         </div>
       </div>
       <div class="step">
         <span class="step-num">2</span>
         <div class="step-body">
-          <p>Download <code class="inline">firmware-heltec-v3-joystick-2.7.26.bin</code> (V3)
-            or <code class="inline">firmware-heltec-v4-joystick-2.7.26.bin</code> (V4).</p>
+          <p>Under <em>Assets</em>, download the binary for your board:</p>
+          <ul class="instr mt">
+            <li>Heltec <strong>V3</strong>: <code class="inline">firmware-heltec-v3-joystick-2.7.26.bin</code></li>
+            <li>Heltec <strong>V4</strong>: <code class="inline">firmware-heltec-v4-joystick-2.7.26.bin</code></li>
+          </ul>
         </div>
       </div>
       <div class="step">
         <span class="step-num">3</span>
         <div class="step-body">
-          <p>Place the file in the <code class="inline">flash_tool/firmware/</code> folder
-            (next to this <code class="inline">index.html</code>) keeping the exact filename.</p>
+          <p>Place the file in <code class="inline">flash_tool/firmware/</code> keeping the exact filename,
+            then skip to <a href="#g-flash">Section 6 — Flash with the Web Tool</a>.</p>
         </div>
       </div>
 
-      <h3>Option B — Build with PlatformIO</h3>
+      <hr style="border-color:var(--border);margin:1.5rem 0">
+
+      <h3>Option B — Build from Source with PlatformIO</h3>
+      <p style="color:var(--muted);margin-bottom:1rem">
+        Building from source gives you the exact binary for your board with full control
+        over build flags and pin assignments. Follow all three steps below for your operating system.
+      </p>
+
+      <!-- ══════════ STEP 1 ══════════ -->
       <div class="step">
         <span class="step-num">1</span>
         <div class="step-body">
-          <p class="step-title">Install tools</p>
-          <pre class="cmd">pip install platformio   # also installs pio CLI
-git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
-cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <p class="step-title">Install Python, Git, and PlatformIO</p>
+          <p style="color:var(--muted)">PlatformIO is a Python-based build system. You need Python 3.8+, Git, and the
+            <code class="inline">pio</code> CLI. Choose your operating system:</p>
+
+          <h3 style="margin-top:1rem">🪟 Windows</h3>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">a</span>
+            <div class="step-body">
+              <p><strong>Install Python 3.8+</strong></p>
+              <p>Go to <a href="https://www.python.org/downloads/windows/" target="_blank">python.org/downloads</a>
+                and download the latest Python 3.x installer.</p>
+              <p class="mt">During installation, <strong>check the box "Add Python to PATH"</strong> — this is critical.</p>
+              <p class="mt">After installing, open <strong>Command Prompt</strong> (<code class="inline">Win + R</code> → type <code class="inline">cmd</code> → Enter) and verify:</p>
+              <pre class="cmd">python --version
+# Expected: Python 3.11.x (or similar)</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">b</span>
+            <div class="step-body">
+              <p><strong>Install Git</strong></p>
+              <p>Download from <a href="https://git-scm.com/download/win" target="_blank">git-scm.com</a>
+                and run the installer with default settings.
+                After installing, close and reopen Command Prompt, then verify:</p>
+              <pre class="cmd">git --version
+# Expected: git version 2.x.x.windows.x</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">c</span>
+            <div class="step-body">
+              <p><strong>Install PlatformIO</strong></p>
+              <pre class="cmd">pip install platformio</pre>
+              <p class="mt">If pip is not found, try <code class="inline">python -m pip install platformio</code>.
+                Verify after installing:</p>
+              <pre class="cmd">pio --version
+# Expected: PlatformIO Core, version 6.x.x</pre>
+              <div class="warn-box">
+                ⚠️ If <code class="inline">pio</code> is not found after installing, close and reopen
+                Command Prompt, or add the Python Scripts folder to your PATH:
+                <code class="inline">C:\Users\YourName\AppData\Local\Programs\Python\Python3x\Scripts</code>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-top:1.25rem">🍎 macOS</h3>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">a</span>
+            <div class="step-body">
+              <p><strong>Install Homebrew</strong> (if not already installed)</p>
+              <p>Open <strong>Terminal</strong> (Spotlight → Terminal) and run:</p>
+              <pre class="cmd">/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">b</span>
+            <div class="step-body">
+              <p><strong>Install Python and Git</strong></p>
+              <pre class="cmd">brew install python git</pre>
+              <p class="mt">macOS ships with Git already installed. The Homebrew version is newer and preferred.
+                Verify both:</p>
+              <pre class="cmd">python3 --version   # Python 3.x.x
+git --version       # git version 2.x.x</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">c</span>
+            <div class="step-body">
+              <p><strong>Install PlatformIO</strong></p>
+              <pre class="cmd">pip3 install platformio</pre>
+              <p class="mt">Verify:</p>
+              <pre class="cmd">pio --version
+# Expected: PlatformIO Core, version 6.x.x</pre>
+              <div class="info-box">
+                💡 On macOS 12+ you may need to use <code class="inline">pip3 install --user platformio</code>
+                and add <code class="inline">~/.local/bin</code> to your PATH in <code class="inline">~/.zshrc</code>.
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-top:1.25rem">🐧 Linux (Ubuntu / Debian)</h3>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">a</span>
+            <div class="step-body">
+              <p><strong>Install Python, pip, and Git</strong></p>
+              <pre class="cmd">sudo apt update
+sudo apt install -y python3 python3-pip python3-venv git</pre>
+              <p class="mt">Verify:</p>
+              <pre class="cmd">python3 --version   # Python 3.x.x
+git --version       # git version 2.x.x</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">b</span>
+            <div class="step-body">
+              <p><strong>Install PlatformIO</strong></p>
+              <pre class="cmd">pip3 install platformio</pre>
+              <p class="mt">If the <code class="inline">pio</code> command is not found after installing:</p>
+              <pre class="cmd">echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc</pre>
+              <p class="mt">Verify:</p>
+              <pre class="cmd">pio --version
+# Expected: PlatformIO Core, version 6.x.x</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">c</span>
+            <div class="step-body">
+              <p><strong>Grant serial port access</strong> (needed for flashing via PlatformIO)</p>
+              <pre class="cmd">sudo usermod -a -G dialout $USER</pre>
+              <p class="mt"><strong>Log out and log back in</strong> for the group change to take effect.
+                Verify with <code class="inline">groups $USER</code> — <code class="inline">dialout</code> should appear in the list.</p>
+            </div>
+          </div>
+
+          <h3 style="margin-top:1.25rem">🖥️ VS Code + PlatformIO IDE (all platforms)</h3>
+          <p style="color:var(--muted)">If you prefer a graphical interface over the command line:</p>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">a</span>
+            <div class="step-body">
+              <p>Install <a href="https://code.visualstudio.com/" target="_blank">Visual Studio Code</a>.</p>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">b</span>
+            <div class="step-body">
+              <p>In VS Code, open Extensions (<code class="inline">Ctrl+Shift+X</code>), search for
+                <strong>PlatformIO IDE</strong>, and install it. Restart VS Code when prompted.</p>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">c</span>
+            <div class="step-body">
+              <p>Open the cloned repository folder in VS Code:
+                <code class="inline">File → Open Folder</code> → select the repo folder.
+                PlatformIO auto-detects <code class="inline">platformio.ini</code>.</p>
+              <p class="mt">Use the <strong>PlatformIO sidebar</strong> (ant icon 🐜) →
+                expand <em>heltec_v3_joystick</em> or <em>heltec_v4_joystick</em> →
+                click <strong>Build</strong>.</p>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- ══════════ STEP 2 ══════════ -->
       <div class="step">
         <span class="step-num">2</span>
         <div class="step-body">
-          <p class="step-title">Build</p>
-          <pre class="cmd">pio run -e heltec_v3_joystick   # for Heltec V3
-pio run -e heltec_v4_joystick   # for Heltec V4</pre>
-          <p>PlatformIO downloads all library dependencies automatically on first run
-            (Meshtastic v2.7.x, Heltec board support, Adafruit SSD1306, etc.).</p>
+          <p class="step-title">Clone the repository and build the firmware</p>
+
+          <h3>Clone the repo</h3>
+          <p>In your terminal / Command Prompt, navigate to a folder where you want the project, then:</p>
+          <pre class="cmd">git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
+cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <div class="info-box">
+            💡 <strong>Windows tip:</strong> Use <code class="inline">cd %USERPROFILE%\Documents</code>
+            first to put the project in your Documents folder.
+          </div>
+
+          <h3 style="margin-top:1rem">Build for Heltec V3</h3>
+          <pre class="cmd">pio run -e heltec_v3_joystick</pre>
+          <p class="mt"><strong>What happens:</strong></p>
+          <ul class="instr" style="color:var(--muted)">
+            <li>PlatformIO reads <code class="inline">platformio.ini</code> and resolves all library dependencies</li>
+            <li>On first run it downloads: ESP32 Arduino framework, Meshtastic v2.7.x, Heltec BSP, Adafruit SSD1306, GFX, XPowersLib (~150–300 MB total)</li>
+            <li>Subsequent builds use the cached packages and are much faster (5–15 seconds)</li>
+            <li>The compiler builds all source files in <code class="inline">src/</code></li>
+          </ul>
+          <p class="mt"><strong>Expected terminal output (abbreviated):</strong></p>
+          <pre class="cmd">============================================================
+  Building: heltec_v3_joystick
+  Board:    Heltec WiFi LoRa 32(V3)
+============================================================
+
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/...
+PLATFORM: Espressif 32 (6.x.x) > Heltec WiFi LoRa 32(V3)
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 8MB Flash
+...
+Compiling .pio/build/heltec_v3_joystick/src/main.cpp.o
+Compiling .pio/build/heltec_v3_joystick/src/input/JoystickInput.cpp.o
+...
+Linking .pio/build/heltec_v3_joystick/firmware.elf
+Building .pio/build/heltec_v3_joystick/firmware.bin
+...
+============================== [SUCCESS] Took 42.15 seconds ==============================</pre>
+
+          <h3 style="margin-top:1rem">Build for Heltec V4</h3>
+          <pre class="cmd">pio run -e heltec_v4_joystick</pre>
+          <p class="mt">Same process as V3 — output will say <code class="inline">Building: heltec_v4_joystick</code>.</p>
+
+          <h3 style="margin-top:1rem">Common build errors and fixes</h3>
+          <table style="margin-top:.5rem">
+            <thead><tr><th>Error Message</th><th>Cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code class="inline">Error: Unknown board ID 'heltec_wifi_lora_32_V3'</code></td>
+                <td>ESP32 platform package not installed yet</td>
+                <td>Run <code class="inline">pio pkg install</code> first, then retry</td>
+              </tr>
+              <tr>
+                <td><code class="inline">pip: command not found</code></td>
+                <td>Python not added to PATH</td>
+                <td>Reinstall Python and check "Add to PATH"; or use <code class="inline">python -m pip</code></td>
+              </tr>
+              <tr>
+                <td><code class="inline">pio: command not found</code></td>
+                <td>PlatformIO Scripts folder not in PATH</td>
+                <td>Close/reopen terminal; add <code class="inline">~/.local/bin</code> (Linux/macOS) to PATH</td>
+              </tr>
+              <tr>
+                <td><code class="inline">Library not found: meshtastic/Meshtastic-device</code></td>
+                <td>PlatformIO registry fetch failed (network)</td>
+                <td>Check internet connection; run <code class="inline">pio lib install</code> then retry build</td>
+              </tr>
+              <tr>
+                <td><code class="inline">fatal error: Wire.h: No such file or directory</code></td>
+                <td>Arduino framework not downloaded yet</td>
+                <td>Wait for first-run package download to complete; do not interrupt</td>
+              </tr>
+              <tr>
+                <td><code class="inline">[ERROR] SSD1306 OLED init failed</code> (serial, not build)</td>
+                <td>Vext power rail not enabled</td>
+                <td>Firmware drives GPIO 36 LOW before I2C — ensure you are running the compiled firmware, not older flash content</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
+
+      <!-- ══════════ STEP 3 ══════════ -->
       <div class="step">
         <span class="step-num">3</span>
         <div class="step-body">
-          <p class="step-title">Copy output binary</p>
+          <p class="step-title">Copy the compiled binary to <code class="inline">flash_tool/firmware/</code></p>
+          <p style="color:var(--muted)">After a successful build the output binary is in the
+            <code class="inline">.pio/build/</code> directory.
+            Copy it to <code class="inline">flash_tool/firmware/</code> with the correct filename
+            so the web flash tool can find it.</p>
+
+          <h3 style="margin-top:1rem">🪟 Windows (PowerShell)</h3>
+          <pre class="cmd"># Make sure you are in the repo root directory, then:
+
+# V3
+Copy-Item .pio\build\heltec_v3_joystick\firmware.bin `
+          flash_tool\firmware\firmware-heltec-v3-joystick-2.7.26.bin
+
+# V4
+Copy-Item .pio\build\heltec_v4_joystick\firmware.bin `
+          flash_tool\firmware\firmware-heltec-v4-joystick-2.7.26.bin</pre>
+          <p class="mt"><strong>Windows (Command Prompt):</strong></p>
+          <pre class="cmd">copy .pio\build\heltec_v3_joystick\firmware.bin ^
+     flash_tool\firmware\firmware-heltec-v3-joystick-2.7.26.bin</pre>
+
+          <h3 style="margin-top:1rem">🍎 macOS / 🐧 Linux</h3>
           <pre class="cmd"># V3
 cp .pio/build/heltec_v3_joystick/firmware.bin \
    flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin
@@ -716,6 +1055,32 @@ cp .pio/build/heltec_v3_joystick/firmware.bin \
 # V4
 cp .pio/build/heltec_v4_joystick/firmware.bin \
    flash_tool/firmware/firmware-heltec-v4-joystick-2.7.26.bin</pre>
+
+          <h3 style="margin-top:1rem">Verify the file is in place</h3>
+          <p><strong>Windows:</strong></p>
+          <pre class="cmd">dir flash_tool\firmware\
+# Should show: firmware-heltec-v3-joystick-2.7.26.bin   ~1,500 KB</pre>
+          <p class="mt"><strong>macOS / Linux:</strong></p>
+          <pre class="cmd">ls -lh flash_tool/firmware/
+# Should show: -rw-r--r--  1 user  staff  1.5M  firmware-heltec-v3-joystick-2.7.26.bin</pre>
+
+          <div class="success-box">
+            ✅ <strong>Build complete!</strong> The firmware binary is ready.<br>
+            Proceed to <a href="#g-flash">Section 6 — Flash with This Web Tool</a>
+            or <a href="#g-pio">Section 7 — Flash with PlatformIO directly</a>.
+          </div>
+
+          <h3 style="margin-top:1rem">Alternative: PlatformIO direct upload (skip copy step)</h3>
+          <p style="color:var(--muted)">If you want to skip the copy step and flash directly from
+            PlatformIO without using the web tool:</p>
+          <pre class="cmd"># Connect the board via USB, then:
+pio run -e heltec_v3_joystick --target upload
+
+# PlatformIO will build (if not already built) and flash in one command.
+# It auto-detects the serial port. Specify manually if needed:
+pio run -e heltec_v3_joystick --target upload --upload-port COM3         # Windows
+pio run -e heltec_v3_joystick --target upload --upload-port /dev/ttyUSB0 # Linux
+pio run -e heltec_v3_joystick --target upload --upload-port /dev/cu.SLAB_USBtoUART  # macOS</pre>
         </div>
       </div>
     </div>
@@ -775,25 +1140,68 @@ cp .pio/build/heltec_v4_joystick/firmware.bin \
 
     <!-- 7. PlatformIO flash -->
     <div class="card" id="g-pio">
-      <h2>7 · Flash with PlatformIO (alternative)</h2>
+      <h2>7 · Flash with PlatformIO (alternative to web tool)</h2>
       <p style="color:var(--muted);margin-bottom:.75rem">
-        If you prefer the command line, PlatformIO can build and flash in one step.
+        If you prefer the command line over the browser-based tool, PlatformIO can build
+        and flash in a single command. This works on Windows, macOS, and Linux.
       </p>
-      <pre class="cmd"># First install (erase + flash)
+
+      <h3>Quick one-liner (build + flash)</h3>
+      <pre class="cmd"># Heltec V3
+pio run -e heltec_v3_joystick --target upload
+
+# Heltec V4
+pio run -e heltec_v4_joystick --target upload</pre>
+
+      <h3 style="margin-top:1rem">First install: erase then flash</h3>
+      <p style="color:var(--muted)">On a fresh board or when switching from different firmware, erase first:</p>
+      <pre class="cmd"># Step 1: erase the entire flash
 pio run -e heltec_v3_joystick --target erase
-pio run -e heltec_v3_joystick --target upload
 
-# Subsequent updates (no erase needed)
-pio run -e heltec_v3_joystick --target upload
+# Step 2: upload the firmware
+pio run -e heltec_v3_joystick --target upload</pre>
 
-# Specify port manually if auto-detect fails
-pio run -e heltec_v3_joystick --target upload --upload-port /dev/ttyUSB0
+      <h3 style="margin-top:1rem">Specify serial port manually</h3>
+      <p style="color:var(--muted)">PlatformIO auto-detects the port in most cases.
+        If it picks the wrong port, specify it explicitly:</p>
+      <pre class="cmd"># Windows — find port with: pio device list
+pio run -e heltec_v3_joystick --target upload --upload-port COM3
 
-# Monitor serial output (useful for debugging)
-pio device monitor --baud 115200</pre>
+# macOS — find port with: ls /dev/cu.*
+pio run -e heltec_v3_joystick --target upload --upload-port /dev/cu.SLAB_USBtoUART
+
+# Linux — find port with: ls /dev/ttyUSB* or ls /dev/ttyACM*
+pio run -e heltec_v3_joystick --target upload --upload-port /dev/ttyUSB0</pre>
+
+      <h3 style="margin-top:1rem">Monitor serial output after flashing</h3>
+      <pre class="cmd">pio device monitor --baud 115200</pre>
+      <p class="mt" style="color:var(--muted)">You should see Meshtastic boot messages and joystick event logs like:</p>
+      <pre class="cmd" style="color:#3fb950">==============================================
+ Meshtastic Joystick Navigation
+ Heltec V3 + Joystick
+==============================================
+[OK] Joystick initialised
+  UP    → GPIO 1
+  DOWN  → GPIO 2
+  LEFT  → GPIO 4
+  RIGHT → GPIO 5
+  CTR   → GPIO 6
+[OK] Setup complete — entering main loop
+[JOY] type=0x01 long=no    ← when you press UP
+[JOY] type=0x06 long=yes   ← when you long-press CENTER</pre>
+
+      <h3 style="margin-top:1rem">VS Code PlatformIO IDE upload</h3>
+      <p style="color:var(--muted)">In VS Code with PlatformIO IDE installed:</p>
+      <ul class="instr" style="color:var(--muted)">
+        <li>Open the repository folder in VS Code</li>
+        <li>Click the PlatformIO sidebar (🐜 ant icon, left panel)</li>
+        <li>Expand <em>heltec_v3_joystick</em> → click <strong>Upload</strong></li>
+        <li>Or use the toolbar at the bottom: click the <strong>→ Upload</strong> arrow button</li>
+      </ul>
+
       <div class="info-box">
-        💡 PlatformIO auto-detects the serial port in most cases.
-        Run <code class="inline">pio device list</code> to see all detected ports.
+        💡 <strong>List all detected serial ports:</strong>
+        <pre class="cmd" style="margin-top:.3rem">pio device list</pre>
       </div>
     </div>
 
