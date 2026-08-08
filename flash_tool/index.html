@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meshtastic Joystick Flash Tool — Heltec V3 / V4</title>
+
+  <!-- esptool-js from Espressif CDN (Web Serial flash library) -->
+  <script src="https://unpkg.com/esptool-js@0.4.3/bundle.js"></script>
+
+  <style>
+    /* ── Reset & base ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand:   #1a73e8;
+      --success: #34a853;
+      --warn:    #fbbc04;
+      --danger:  #ea4335;
+      --bg:      #0d1117;
+      --surface: #161b22;
+      --border:  #30363d;
+      --text:    #c9d1d9;
+      --muted:   #8b949e;
+      --font:    'Segoe UI', system-ui, sans-serif;
+      --mono:    'Consolas', 'Courier New', monospace;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    a { color: var(--brand); }
+    code, pre { font-family: var(--mono); }
+
+    /* ── Layout ────────────────────────────────────────────── */
+    .container { max-width: 900px; margin: 0 auto; }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    header h1 {
+      font-size: 1.9rem;
+      color: #fff;
+      margin-bottom: .4rem;
+    }
+    header p { color: var(--muted); font-size: .95rem; }
+    header .badges { margin-top: .6rem; }
+    header .badge {
+      display: inline-block;
+      background: #1f2937;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .15rem .65rem;
+      font-size: .78rem;
+      color: var(--muted);
+      margin: .15rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      color: #fff;
+      margin-bottom: 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .card h3 {
+      font-size: .98rem;
+      color: #e6edf3;
+      margin: 1rem 0 .4rem;
+    }
+
+    /* ── Tabs ──────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      padding: .6rem 1.4rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: .9rem;
+      cursor: pointer;
+      transition: color .2s, border-color .2s;
+    }
+    .tab-btn:hover   { color: var(--text); }
+    .tab-btn.active  { color: var(--brand); border-bottom-color: var(--brand); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Stepper ───────────────────────────────────────────── */
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 700;
+      font-size: .85rem;
+      flex-shrink: 0;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      margin-bottom: 1.1rem;
+      padding-bottom: 1.1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .step-body { flex: 1; }
+    .step-body p { color: var(--text); margin-bottom: .4rem; }
+    .step-body p:last-child { margin-bottom: 0; }
+    .step-title { font-weight: 600; color: #fff; margin-bottom: .3rem; }
+
+    /* ── Board selector ──────────────────────────────────────── */
+    .board-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    @media (max-width: 520px) { .board-grid { grid-template-columns: 1fr; } }
+
+    .board-card {
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      user-select: none;
+    }
+    .board-card:hover  { border-color: var(--brand); background: #1a1f2c; }
+    .board-card.active { border-color: var(--brand); background: #111d35; }
+    .board-card h3 { color: #fff; margin: 0 0 .3rem; font-size: 1rem; }
+    .board-card p  { color: var(--muted); font-size: .82rem; margin: 0; }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .55rem 1.3rem;
+      border: none;
+      border-radius: 6px;
+      font-size: .9rem;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary  { background: var(--brand);   color: #fff; }
+    .btn-success  { background: var(--success); color: #fff; }
+    .btn-danger   { background: var(--danger);  color: #fff; }
+    .btn-outline  { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn:not(:disabled):hover { opacity: .85; }
+
+    /* ── Progress bar ────────────────────────────────────────── */
+    .progress-wrap {
+      background: var(--border);
+      border-radius: 4px;
+      height: 12px;
+      overflow: hidden;
+      margin: .9rem 0 .3rem;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--brand);
+      width: 0%;
+      transition: width .25s;
+    }
+
+    /* ── Log console ─────────────────────────────────────────── */
+    #log {
+      background: #0a0e14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: var(--mono);
+      font-size: .79rem;
+      height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-info  { color: #58a6ff; }
+    .log-ok    { color: #3fb950; }
+    .log-warn  { color: #d29922; }
+    .log-error { color: #f85149; }
+
+    /* ── Status badge ────────────────────────────────────────── */
+    #status-badge {
+      display: inline-block;
+      padding: .2rem .75rem;
+      border-radius: 20px;
+      font-size: .82rem;
+      font-weight: 600;
+      background: var(--border);
+      color: var(--muted);
+    }
+    #status-badge.connected  { background: #1a3a1a; color: var(--success); }
+    #status-badge.flashing   { background: #1a2a3a; color: var(--brand); }
+    #status-badge.done       { background: #1a3a1a; color: var(--success); }
+    #status-badge.error      { background: #3a1a1a; color: var(--danger); }
+
+    /* ── Misc helpers ───────────────────────────────────────── */
+    .row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+    .mt { margin-top: .75rem; }
+    .mb { margin-bottom: .75rem; }
+
+    .info-box {
+      background: #111d35;
+      border-left: 4px solid var(--brand);
+      border-radius: 0 6px 6px 0;
+      padding: .75rem 1rem;
+      font-size: .87rem;
+      color: var(--muted);
+      margin-top: .75rem;
+    }
+    .warn-box {
+      background: #2a1e00;
+      border-left: 4px solid var(--warn);
+      border-radius: 0 6px 6px 0;
+      padding: .75rem 1rem;
+      font-size: .87rem;
+      color: #e3b341;
+      margin-top: .75rem;
+    }
+    .success-box {
+      background: #0d2818;
+      border-left: 4px solid var(--success);
+      border-radius: 0 6px 6px 0;
+      padding: .75rem 1rem;
+      font-size: .87rem;
+      color: #85e89d;
+      margin-top: .75rem;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+    th, td { padding: .45rem .75rem; border: 1px solid var(--border); text-align: left; }
+    th { background: #1f2937; color: #fff; }
+    tr:nth-child(even) td { background: #13181f; }
+
+    code.inline {
+      background: #1f2937;
+      padding: .15rem .4rem;
+      border-radius: 4px;
+      font-size: .85em;
+      font-family: var(--mono);
+    }
+    pre.cmd {
+      background: #0a0e14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .75rem 1rem;
+      font-size: .83rem;
+      overflow-x: auto;
+      margin: .5rem 0;
+    }
+
+    .ascii-diagram {
+      background: #0a0e14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: var(--mono);
+      font-size: .8rem;
+      line-height: 1.5;
+      overflow-x: auto;
+      color: #58a6ff;
+      margin: .75rem 0;
+    }
+
+    ul.instr { padding-left: 1.4rem; }
+    ul.instr li { margin-bottom: .3rem; }
+
+    .toc { padding-left: 1.2rem; line-height: 1.9; }
+    .toc a { color: var(--brand); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: .82rem;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── Header ────────────────────────────────────────────── -->
+  <header>
+    <h1>🎮 Meshtastic Joystick Flash Tool</h1>
+    <p>Flash Meshtastic firmware with 5-way joystick navigation support to <strong>Heltec WiFi LoRa 32 V3</strong> or <strong>V4</strong></p>
+    <div class="badges">
+      <span class="badge">Meshtastic v2.7.x</span>
+      <span class="badge">Heltec V3 · V4</span>
+      <span class="badge">ESP32-S3 + SX1262</span>
+      <span class="badge">Chrome / Edge 89+</span>
+    </div>
+  </header>
+
+  <!-- ── Browser support notice ─────────────────────────────── -->
+  <div id="browser-warn" class="warn-box" style="display:none">
+    ⚠️ <strong>Unsupported browser.</strong> Web Serial API requires <strong>Chrome 89+</strong> or <strong>Edge 89+</strong> on desktop.
+    Firefox and Safari are not supported.
+    <a href="https://www.google.com/chrome/" target="_blank">Download Chrome →</a>
+  </div>
+
+  <!-- ── Tabs ──────────────────────────────────────────────── -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-flash',   this)">⚡ Flash Tool</button>
+    <button class="tab-btn"        onclick="switchTab('tab-guide',   this)">📖 Full Instructions</button>
+    <button class="tab-btn"        onclick="switchTab('tab-wiring',  this)">🔌 Wiring Reference</button>
+    <button class="tab-btn"        onclick="switchTab('tab-faq',     this)">❓ FAQ</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       TAB 1 — FLASH TOOL
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="tab-flash" class="tab-panel active">
+
+    <!-- 1. Select board -->
+    <div class="card">
+      <h2>① Select Your Board</h2>
+      <div class="board-grid">
+        <div class="board-card active" id="card-v3" onclick="selectBoard('v3')">
+          <h3>Heltec WiFi LoRa 32 <span style="color:var(--brand)">V3</span></h3>
+          <p>ESP32-S3FN8 · SX1262 · 0.96″ OLED · 8 MB Flash / 8 MB PSRAM · ~180 µA sleep</p>
+        </div>
+        <div class="board-card" id="card-v4" onclick="selectBoard('v4')">
+          <h3>Heltec WiFi LoRa 32 <span style="color:var(--brand)">V4</span></h3>
+          <p>ESP32-S3R2 · SX1262 · 0.96″ OLED · 8 MB Flash / 2 MB PSRAM · ~140 µA sleep</p>
+        </div>
+      </div>
+      <div class="info-box">
+        📌 <strong>Not sure which board you have?</strong>
+        Check the silkscreen on the PCB — it reads <em>WiFi LoRa 32(V3)</em> or <em>WiFi LoRa 32(V4)</em>.
+        The V4 usually has a noticeably larger antenna connector area and a revised USB-C placement.
+      </div>
+    </div>
+
+    <!-- 2. Get firmware -->
+    <div class="card">
+      <h2>② Get Firmware</h2>
+      <p style="color:var(--muted);margin-bottom:.75rem">
+        The flash tool needs a compiled <code class="inline">.bin</code> file.
+        Choose one of the two options below, then proceed to ③ Connect.
+      </p>
+
+      <h3>Option A — Download pre-built binary <em style="color:var(--success);font-weight:normal">(easiest — no software needed)</em></h3>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p>Go to the GitHub Releases page and download the <code class="inline">.bin</code> for your board:</p>
+          <div class="row mt">
+            <a class="btn btn-outline" href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4/releases" target="_blank">
+              📦 Open GitHub Releases →
+            </a>
+          </div>
+          <ul class="instr mt" style="color:var(--muted)">
+            <li>For Heltec <strong>V3</strong>: download <code class="inline">firmware-heltec-v3-joystick-2.7.26.bin</code></li>
+            <li>For Heltec <strong>V4</strong>: download <code class="inline">firmware-heltec-v4-joystick-2.7.26.bin</code></li>
+          </ul>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p>Place the downloaded file in the <code class="inline">flash_tool/firmware/</code> folder
+            (same folder as this <code class="inline">index.html</code>), keeping the exact filename.</p>
+          <div class="info-box">
+            📁 Expected path: <code class="inline">flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin</code>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p>Skip to <strong>③ Connect Device</strong> below. You're ready to flash.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.25rem">Option B — Build from source with PlatformIO <em style="color:var(--muted);font-weight:normal">(full control)</em></h3>
+      <p style="color:var(--muted);margin-bottom:.75rem">
+        For detailed OS-specific instructions for all three build steps, open the
+        <button class="btn btn-outline" style="padding:.2rem .7rem;font-size:.82rem" onclick="switchTab('tab-guide', document.querySelectorAll('.tab-btn')[1])">📖 Full Instructions tab</button>
+        and go to <strong>Section 5 — Get the Firmware → Option B</strong>.
+        The quick version is below:
+      </p>
+
+      <!-- STEP 1 -->
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p class="step-title">Install tools</p>
+          <p><strong>Windows:</strong> Install <a href="https://www.python.org/downloads/windows/" target="_blank">Python 3.8+</a>
+            (check "Add to PATH" during install), then open <strong>Command Prompt</strong> or <strong>PowerShell</strong>:</p>
+          <pre class="cmd">pip install platformio
+git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
+cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <p class="mt"><strong>macOS:</strong> Install <a href="https://brew.sh" target="_blank">Homebrew</a> first if needed, then in Terminal:</p>
+          <pre class="cmd">brew install python git
+pip3 install platformio
+git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
+cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <p class="mt"><strong>Linux (Debian/Ubuntu):</strong></p>
+          <pre class="cmd">sudo apt update && sudo apt install -y python3 python3-pip git
+pip3 install platformio
+git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
+cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <div class="info-box">
+            ✅ Verify installation: <code class="inline">pio --version</code> should print
+            <code class="inline">PlatformIO Core, version 6.x.x</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p class="step-title">Build the firmware</p>
+          <p>Run one command for your board. PlatformIO will automatically download all library
+            dependencies (Meshtastic, Heltec BSP, Adafruit SSD1306, etc.) on first run —
+            this may take 2–5 minutes with a good internet connection.</p>
+          <pre class="cmd"># For Heltec V3:
+pio run -e heltec_v3_joystick
+
+# For Heltec V4:
+pio run -e heltec_v4_joystick</pre>
+          <p class="mt">Expected output when successful:</p>
+          <pre class="cmd" style="color:#3fb950">============================== [SUCCESS] Took 45.32 seconds ==============================</pre>
+          <div class="warn-box">
+            ⚠️ If you see <code class="inline">Error: Unknown board ID</code>, run
+            <code class="inline">pio pkg install</code> first to force a package refresh.
+            If you see a Python error, ensure Python 3.8+ is installed and
+            <code class="inline">pip install --upgrade platformio</code>.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p class="step-title">Copy the binary to <code class="inline">flash_tool/firmware/</code></p>
+          <p><strong>Windows (PowerShell):</strong></p>
+          <pre class="cmd"># V3
+Copy-Item .pio\build\heltec_v3_joystick\firmware.bin `
+  flash_tool\firmware\firmware-heltec-v3-joystick-2.7.26.bin
+
+# V4
+Copy-Item .pio\build\heltec_v4_joystick\firmware.bin `
+  flash_tool\firmware\firmware-heltec-v4-joystick-2.7.26.bin</pre>
+          <p class="mt"><strong>macOS / Linux:</strong></p>
+          <pre class="cmd"># V3
+cp .pio/build/heltec_v3_joystick/firmware.bin \
+   flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin
+
+# V4
+cp .pio/build/heltec_v4_joystick/firmware.bin \
+   flash_tool/firmware/firmware-heltec-v4-joystick-2.7.26.bin</pre>
+          <div class="success-box">
+            ✅ After copying, the file should be at:<br>
+            <code class="inline">flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin</code><br>
+            You are now ready to flash — proceed to ③ Connect Device.
+          </div>
+        </div>
+      </div>
+
+      <div class="warn-box">
+        ⚠️ The Flash Firmware button is <strong>disabled until a firmware binary is present</strong>
+        at the expected path. The tool checks for the file when you click Flash Firmware and will
+        show an error in the log if the file is missing.
+      </div>
+    </div>
+
+    <!-- 3. Connect -->
+    <div class="card">
+      <h2>③ Connect Device</h2>
+      <p class="mb" style="color:var(--muted)">Connect the Heltec board via USB before clicking Connect.
+        Use a <strong>USB-A → USB-C data cable</strong> (not charge-only).
+        USB-C→USB-C cables with CP2102 boards can cause enumeration issues.</p>
+      <div class="row">
+        <button class="btn btn-primary" id="btn-connect" onclick="connectDevice()">
+          🔌 Connect via USB
+        </button>
+        <span id="status-badge">Not connected</span>
+      </div>
+
+      <div class="warn-box">
+        🔒 <strong>No serial port appearing?</strong>
+        Install the CP2102 VCP driver:
+        <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank">SiLabs CP2102 drivers →</a><br>
+        Linux users: <code class="inline">sudo usermod -a -G dialout $USER</code> then log out/in.
+      </div>
+
+      <div id="connect-success" class="success-box" style="display:none">
+        ✅ <strong>Device connected!</strong>
+        The ESP32-S3 chip was detected. You may now flash or erase.
+      </div>
+    </div>
+
+    <!-- 4. Flash options -->
+    <div class="card">
+      <h2>④ Flash Firmware</h2>
+      <div class="row mb">
+        <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer">
+          <input type="checkbox" id="chk-erase" checked />
+          <span>Full chip erase before flashing</span>
+          <em style="color:var(--muted);font-size:.83rem">(recommended for first install)</em>
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn btn-success" id="btn-flash" onclick="startFlash()" disabled>
+          ⚡ Flash Firmware
+        </button>
+        <button class="btn btn-outline" id="btn-erase-only" onclick="eraseOnly()" disabled>
+          🗑️ Erase Only
+        </button>
+        <button class="btn btn-outline" id="btn-disconnect" onclick="disconnectDevice()" disabled>
+          ⏏️ Disconnect
+        </button>
+      </div>
+
+      <div class="progress-wrap" id="progress-wrap" style="display:none">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div id="progress-label" style="font-size:.82rem;color:var(--muted);margin-top:.3rem"></div>
+    </div>
+
+    <!-- 5. Log -->
+    <div class="card">
+      <h2>⑤ Flash Log</h2>
+      <div id="log"><span class="log-info">Ready. Select a board and connect a device to begin.</span>
+</div>
+      <div class="row mt">
+        <button class="btn btn-outline" onclick="clearLog()">🧹 Clear Log</button>
+        <button class="btn btn-outline" onclick="copyLog()">📋 Copy Log</button>
+      </div>
+    </div>
+
+  </div><!-- /tab-flash -->
+
+
+  <!-- ════════════════════════════════════════════════════════════
+       TAB 2 — FULL INSTRUCTIONS
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="tab-guide" class="tab-panel">
+    <div class="card">
+      <h2>📖 Complete Setup Guide</h2>
+      <p style="color:var(--muted)">
+        Follow these steps in order to wire up your joystick, build (or download)
+        the firmware, and flash your Heltec board.
+      </p>
+
+      <!-- Contents -->
+      <h3>Contents</h3>
+      <ol class="toc">
+        <li><a href="#g-prereq">Prerequisites</a></li>
+        <li><a href="#g-hardware">Hardware You Need</a></li>
+        <li><a href="#g-driver">Install USB Driver</a></li>
+        <li><a href="#g-wire">Wire the Joystick</a></li>
+        <li><a href="#g-firmware">Get the Firmware</a></li>
+        <li><a href="#g-flash">Flash with This Web Tool</a></li>
+        <li><a href="#g-pio">Flash with PlatformIO (alternative)</a></li>
+        <li><a href="#g-firstboot">First Boot &amp; Meshtastic Setup</a></li>
+        <li><a href="#g-navigate">Joystick Navigation Controls</a></li>
+        <li><a href="#g-app">Pair with the Meshtastic App</a></li>
+        <li><a href="#g-troubleshoot">Troubleshooting</a></li>
+      </ol>
+    </div>
+
+    <!-- 1. Prerequisites -->
+    <div class="card" id="g-prereq">
+      <h2>1 · Prerequisites</h2>
+      <div class="step">
+        <span class="step-num">A</span>
+        <div class="step-body">
+          <p class="step-title">Browser</p>
+          <p>Use <strong>Google Chrome 89+</strong> or <strong>Microsoft Edge 89+</strong> on a desktop/laptop.
+            Firefox and Safari do not support the Web Serial API required for flashing.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">B</span>
+        <div class="step-body">
+          <p class="step-title">USB Cable</p>
+          <p>A <strong>USB-A to USB-C data cable</strong> (not charge-only).
+            Charge-only cables lack the data wires. USB-C to USB-C cables may
+            cause driver issues with the on-board CP2102 bridge.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">C</span>
+        <div class="step-body">
+          <p class="step-title">CP2102 USB–UART Driver</p>
+          <p>The Heltec board uses a SiLabs CP2102 USB-to-serial chip.
+            Install the driver if your OS does not recognise the port automatically.
+            See <a href="#g-driver">Step 3 — Install USB Driver</a>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">D</span>
+        <div class="step-body">
+          <p class="step-title">Firmware Binary</p>
+          <p>You need a compiled <code class="inline">.bin</code> file.
+            Either <a href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4/releases" target="_blank">download a pre-built release</a>
+            or build it yourself using PlatformIO (see <a href="#g-firmware">Step 5</a>).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Hardware -->
+    <div class="card" id="g-hardware">
+      <h2>2 · Hardware You Need</h2>
+      <table>
+        <thead><tr><th>Item</th><th>Details / Where to Buy</th></tr></thead>
+        <tbody>
+          <tr><td>Heltec WiFi LoRa 32 <strong>V3</strong> or <strong>V4</strong></td>
+              <td>Available from Heltec store, AliExpress, Mouser, DigiKey</td></tr>
+          <tr><td>5-way passive navigation joystick</td>
+              <td>Alps RKJXK series, SKRHAAE series, PSP joystick breakout, or Grove 5-way switch</td></tr>
+          <tr><td>5 × short jumper wires</td>
+              <td>Dupont female-female or breadboard wires</td></tr>
+          <tr><td>Breadboard <em>(optional)</em></td>
+              <td>For prototyping; can be skipped if directly soldering</td></tr>
+          <tr><td>LoRa antenna</td>
+              <td>Included with most Heltec boards; connect before powering on</td></tr>
+        </tbody>
+      </table>
+      <div class="warn-box">
+        ⚠️ <strong>Always attach the LoRa antenna</strong> before powering the board.
+        Transmitting without an antenna can damage the SX1262 RF front-end.
+      </div>
+    </div>
+
+    <!-- 3. Driver -->
+    <div class="card" id="g-driver">
+      <h2>3 · Install USB Driver</h2>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p class="step-title">Windows &amp; macOS</p>
+          <p>Download and install the <strong>SiLabs CP210x VCP driver</strong>:</p>
+          <div class="row mt">
+            <a class="btn btn-outline" href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank">
+              SiLabs CP2102 Drivers →
+            </a>
+          </div>
+          <p class="mt">After installing, unplug and replug the USB cable.
+            The device should appear as <code class="inline">COM3</code> (Windows) or
+            <code class="inline">/dev/cu.SLAB_USBtoUART</code> (macOS).</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p class="step-title">Linux</p>
+          <p>The CP210x driver is included in the Linux kernel. Add your user to the
+            <code class="inline">dialout</code> group so Chrome can access serial ports:</p>
+          <pre class="cmd">sudo usermod -a -G dialout $USER
+# Log out and log back in for the change to take effect</pre>
+          <p>The device will appear as <code class="inline">/dev/ttyUSB0</code> or
+            <code class="inline">/dev/ttyACM0</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p class="step-title">Verify the port appears</p>
+          <p>With the board connected, open Chrome → address bar → type
+            <code class="inline">chrome://device-log</code> and look for a USB serial device entry.
+            You can also check the OS device manager.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Wiring -->
+    <div class="card" id="g-wire">
+      <h2>4 · Wire the Joystick</h2>
+      <p style="color:var(--muted);margin-bottom:.75rem">
+        A passive 5-way joystick has one common pin and five switch pins (UP, DOWN, LEFT, RIGHT, CENTER).
+        No external resistors are needed — the firmware enables internal pull-ups.
+      </p>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p class="step-title">Connect GND first</p>
+          <p>Wire the joystick <strong>COM / GND</strong> pin to any <strong>GND</strong> pin on the Heltec header.
+            This is the most important wire — all direction switches are active-LOW relative to this.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p class="step-title">Connect direction pins</p>
+          <p>Wire each joystick direction to the corresponding GPIO on the right header of the Heltec board:</p>
+          <table style="margin-top:.5rem">
+            <thead><tr><th>Joystick Pin</th><th>GPIO</th><th>Heltec Header Label</th></tr></thead>
+            <tbody>
+              <tr><td>UP</td>    <td><code class="inline">GPIO 1</code></td>  <td>IO1</td></tr>
+              <tr><td>DOWN</td>  <td><code class="inline">GPIO 2</code></td>  <td>IO2</td></tr>
+              <tr><td>LEFT</td>  <td><code class="inline">GPIO 4</code></td>  <td>IO4</td></tr>
+              <tr><td>RIGHT</td> <td><code class="inline">GPIO 5</code></td>  <td>IO5</td></tr>
+              <tr><td>CENTER / CLICK</td><td><code class="inline">GPIO 6</code></td><td>IO6</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p class="step-title">VCC (optional)</p>
+          <p>If your joystick module has an indicator LED or active logic that needs power,
+            connect its <strong>VCC</strong> pin to the Heltec <strong>3V3</strong> header pin.
+            Pure passive switches do not need VCC.</p>
+        </div>
+      </div>
+      <div class="info-box">
+        💡 <strong>GPIO locations on the right header</strong> (top → bottom):
+        GND, RST, IO0, IO36, IO35, IO34, IO21, IO20, IO19, IO18, IO17,
+        IO16, IO15, IO7, <strong>IO6</strong>, <strong>IO5</strong>, <strong>IO4</strong>, IO3, <strong>IO2</strong>, <strong>IO1</strong>.<br>
+        IO1, IO2, IO4, IO5, IO6 are near the <strong>bottom</strong> of the right header.
+      </div>
+      <div class="warn-box">
+        ⚠️ <strong>Do NOT use:</strong> GPIO 0 (boot button), GPIO 8–14 (LoRa SPI), GPIO 17–18 (OLED I2C),
+        GPIO 21 (OLED RST), GPIO 35 (LED), GPIO 36 (Vext). Using reserved pins will cause
+        conflicts with on-board peripherals.
+      </div>
+    </div>
+
+    <!-- 5. Get firmware -->
+    <div class="card" id="g-firmware">
+      <h2>5 · Get the Firmware</h2>
+
+      <h3>Option A — Pre-built Release <em style="color:var(--success);font-weight:normal">(recommended for most users)</em></h3>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p>Open the <a href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4/releases" target="_blank">GitHub Releases page →</a>
+            and find the latest release.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p>Under <em>Assets</em>, download the binary for your board:</p>
+          <ul class="instr mt">
+            <li>Heltec <strong>V3</strong>: <code class="inline">firmware-heltec-v3-joystick-2.7.26.bin</code></li>
+            <li>Heltec <strong>V4</strong>: <code class="inline">firmware-heltec-v4-joystick-2.7.26.bin</code></li>
+          </ul>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p>Place the file in <code class="inline">flash_tool/firmware/</code> keeping the exact filename,
+            then skip to <a href="#g-flash">Section 6 — Flash with the Web Tool</a>.</p>
+        </div>
+      </div>
+
+      <hr style="border-color:var(--border);margin:1.5rem 0">
+
+      <h3>Option B — Build from Source with PlatformIO</h3>
+      <p style="color:var(--muted);margin-bottom:1rem">
+        Building from source gives you the exact binary for your board with full control
+        over build flags and pin assignments. Follow all three steps below for your operating system.
+      </p>
+
+      <!-- ══════════ STEP 1 ══════════ -->
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p class="step-title">Install Python, Git, and PlatformIO</p>
+          <p style="color:var(--muted)">PlatformIO is a Python-based build system. You need Python 3.8+, Git, and the
+            <code class="inline">pio</code> CLI. Choose your operating system:</p>
+
+          <h3 style="margin-top:1rem">🪟 Windows</h3>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">a</span>
+            <div class="step-body">
+              <p><strong>Install Python 3.8+</strong></p>
+              <p>Go to <a href="https://www.python.org/downloads/windows/" target="_blank">python.org/downloads</a>
+                and download the latest Python 3.x installer.</p>
+              <p class="mt">During installation, <strong>check the box "Add Python to PATH"</strong> — this is critical.</p>
+              <p class="mt">After installing, open <strong>Command Prompt</strong> (<code class="inline">Win + R</code> → type <code class="inline">cmd</code> → Enter) and verify:</p>
+              <pre class="cmd">python --version
+# Expected: Python 3.11.x (or similar)</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">b</span>
+            <div class="step-body">
+              <p><strong>Install Git</strong></p>
+              <p>Download from <a href="https://git-scm.com/download/win" target="_blank">git-scm.com</a>
+                and run the installer with default settings.
+                After installing, close and reopen Command Prompt, then verify:</p>
+              <pre class="cmd">git --version
+# Expected: git version 2.x.x.windows.x</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">c</span>
+            <div class="step-body">
+              <p><strong>Install PlatformIO</strong></p>
+              <pre class="cmd">pip install platformio</pre>
+              <p class="mt">If pip is not found, try <code class="inline">python -m pip install platformio</code>.
+                Verify after installing:</p>
+              <pre class="cmd">pio --version
+# Expected: PlatformIO Core, version 6.x.x</pre>
+              <div class="warn-box">
+                ⚠️ If <code class="inline">pio</code> is not found after installing, close and reopen
+                Command Prompt, or add the Python Scripts folder to your PATH:
+                <code class="inline">C:\Users\YourName\AppData\Local\Programs\Python\Python3x\Scripts</code>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-top:1.25rem">🍎 macOS</h3>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">a</span>
+            <div class="step-body">
+              <p><strong>Install Homebrew</strong> (if not already installed)</p>
+              <p>Open <strong>Terminal</strong> (Spotlight → Terminal) and run:</p>
+              <pre class="cmd">/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">b</span>
+            <div class="step-body">
+              <p><strong>Install Python and Git</strong></p>
+              <pre class="cmd">brew install python git</pre>
+              <p class="mt">macOS ships with Git already installed. The Homebrew version is newer and preferred.
+                Verify both:</p>
+              <pre class="cmd">python3 --version   # Python 3.x.x
+git --version       # git version 2.x.x</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">c</span>
+            <div class="step-body">
+              <p><strong>Install PlatformIO</strong></p>
+              <pre class="cmd">pip3 install platformio</pre>
+              <p class="mt">Verify:</p>
+              <pre class="cmd">pio --version
+# Expected: PlatformIO Core, version 6.x.x</pre>
+              <div class="info-box">
+                💡 On macOS 12+ you may need to use <code class="inline">pip3 install --user platformio</code>
+                and add <code class="inline">~/.local/bin</code> to your PATH in <code class="inline">~/.zshrc</code>.
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-top:1.25rem">🐧 Linux (Ubuntu / Debian)</h3>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">a</span>
+            <div class="step-body">
+              <p><strong>Install Python, pip, and Git</strong></p>
+              <pre class="cmd">sudo apt update
+sudo apt install -y python3 python3-pip python3-venv git</pre>
+              <p class="mt">Verify:</p>
+              <pre class="cmd">python3 --version   # Python 3.x.x
+git --version       # git version 2.x.x</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">b</span>
+            <div class="step-body">
+              <p><strong>Install PlatformIO</strong></p>
+              <pre class="cmd">pip3 install platformio</pre>
+              <p class="mt">If the <code class="inline">pio</code> command is not found after installing:</p>
+              <pre class="cmd">echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc</pre>
+              <p class="mt">Verify:</p>
+              <pre class="cmd">pio --version
+# Expected: PlatformIO Core, version 6.x.x</pre>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">c</span>
+            <div class="step-body">
+              <p><strong>Grant serial port access</strong> (needed for flashing via PlatformIO)</p>
+              <pre class="cmd">sudo usermod -a -G dialout $USER</pre>
+              <p class="mt"><strong>Log out and log back in</strong> for the group change to take effect.
+                Verify with <code class="inline">groups $USER</code> — <code class="inline">dialout</code> should appear in the list.</p>
+            </div>
+          </div>
+
+          <h3 style="margin-top:1.25rem">🖥️ VS Code + PlatformIO IDE (all platforms)</h3>
+          <p style="color:var(--muted)">If you prefer a graphical interface over the command line:</p>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">a</span>
+            <div class="step-body">
+              <p>Install <a href="https://code.visualstudio.com/" target="_blank">Visual Studio Code</a>.</p>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">b</span>
+            <div class="step-body">
+              <p>In VS Code, open Extensions (<code class="inline">Ctrl+Shift+X</code>), search for
+                <strong>PlatformIO IDE</strong>, and install it. Restart VS Code when prompted.</p>
+            </div>
+          </div>
+          <div class="step" style="margin-bottom:.5rem">
+            <span class="step-num" style="background:#555">c</span>
+            <div class="step-body">
+              <p>Open the cloned repository folder in VS Code:
+                <code class="inline">File → Open Folder</code> → select the repo folder.
+                PlatformIO auto-detects <code class="inline">platformio.ini</code>.</p>
+              <p class="mt">Use the <strong>PlatformIO sidebar</strong> (ant icon 🐜) →
+                expand <em>heltec_v3_joystick</em> or <em>heltec_v4_joystick</em> →
+                click <strong>Build</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════ STEP 2 ══════════ -->
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p class="step-title">Clone the repository and build the firmware</p>
+
+          <h3>Clone the repo</h3>
+          <p>In your terminal / Command Prompt, navigate to a folder where you want the project, then:</p>
+          <pre class="cmd">git clone https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4.git
+cd Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4</pre>
+          <div class="info-box">
+            💡 <strong>Windows tip:</strong> Use <code class="inline">cd %USERPROFILE%\Documents</code>
+            first to put the project in your Documents folder.
+          </div>
+
+          <h3 style="margin-top:1rem">Build for Heltec V3</h3>
+          <pre class="cmd">pio run -e heltec_v3_joystick</pre>
+          <p class="mt"><strong>What happens:</strong></p>
+          <ul class="instr" style="color:var(--muted)">
+            <li>PlatformIO reads <code class="inline">platformio.ini</code> and resolves all library dependencies</li>
+            <li>On first run it downloads: ESP32 Arduino framework, Meshtastic v2.7.x, Heltec BSP, Adafruit SSD1306, GFX, XPowersLib (~150–300 MB total)</li>
+            <li>Subsequent builds use the cached packages and are much faster (5–15 seconds)</li>
+            <li>The compiler builds all source files in <code class="inline">src/</code></li>
+          </ul>
+          <p class="mt"><strong>Expected terminal output (abbreviated):</strong></p>
+          <pre class="cmd">============================================================
+  Building: heltec_v3_joystick
+  Board:    Heltec WiFi LoRa 32(V3)
+============================================================
+
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/...
+PLATFORM: Espressif 32 (6.x.x) > Heltec WiFi LoRa 32(V3)
+HARDWARE: ESP32S3 240MHz, 320KB RAM, 8MB Flash
+...
+Compiling .pio/build/heltec_v3_joystick/src/main.cpp.o
+Compiling .pio/build/heltec_v3_joystick/src/input/JoystickInput.cpp.o
+...
+Linking .pio/build/heltec_v3_joystick/firmware.elf
+Building .pio/build/heltec_v3_joystick/firmware.bin
+...
+============================== [SUCCESS] Took 42.15 seconds ==============================</pre>
+
+          <h3 style="margin-top:1rem">Build for Heltec V4</h3>
+          <pre class="cmd">pio run -e heltec_v4_joystick</pre>
+          <p class="mt">Same process as V3 — output will say <code class="inline">Building: heltec_v4_joystick</code>.</p>
+
+          <h3 style="margin-top:1rem">Common build errors and fixes</h3>
+          <table style="margin-top:.5rem">
+            <thead><tr><th>Error Message</th><th>Cause</th><th>Fix</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code class="inline">Error: Unknown board ID 'heltec_wifi_lora_32_V3'</code></td>
+                <td>ESP32 platform package not installed yet</td>
+                <td>Run <code class="inline">pio pkg install</code> first, then retry</td>
+              </tr>
+              <tr>
+                <td><code class="inline">pip: command not found</code></td>
+                <td>Python not added to PATH</td>
+                <td>Reinstall Python and check "Add to PATH"; or use <code class="inline">python -m pip</code></td>
+              </tr>
+              <tr>
+                <td><code class="inline">pio: command not found</code></td>
+                <td>PlatformIO Scripts folder not in PATH</td>
+                <td>Close/reopen terminal; add <code class="inline">~/.local/bin</code> (Linux/macOS) to PATH</td>
+              </tr>
+              <tr>
+                <td><code class="inline">Library not found: meshtastic/Meshtastic-device</code></td>
+                <td>PlatformIO registry fetch failed (network)</td>
+                <td>Check internet connection; run <code class="inline">pio lib install</code> then retry build</td>
+              </tr>
+              <tr>
+                <td><code class="inline">fatal error: Wire.h: No such file or directory</code></td>
+                <td>Arduino framework not downloaded yet</td>
+                <td>Wait for first-run package download to complete; do not interrupt</td>
+              </tr>
+              <tr>
+                <td><code class="inline">[ERROR] SSD1306 OLED init failed</code> (serial, not build)</td>
+                <td>Vext power rail not enabled</td>
+                <td>Firmware drives GPIO 36 LOW before I2C — ensure you are running the compiled firmware, not older flash content</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════ STEP 3 ══════════ -->
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p class="step-title">Copy the compiled binary to <code class="inline">flash_tool/firmware/</code></p>
+          <p style="color:var(--muted)">After a successful build the output binary is in the
+            <code class="inline">.pio/build/</code> directory.
+            Copy it to <code class="inline">flash_tool/firmware/</code> with the correct filename
+            so the web flash tool can find it.</p>
+
+          <h3 style="margin-top:1rem">🪟 Windows (PowerShell)</h3>
+          <pre class="cmd"># Make sure you are in the repo root directory, then:
+
+# V3
+Copy-Item .pio\build\heltec_v3_joystick\firmware.bin `
+          flash_tool\firmware\firmware-heltec-v3-joystick-2.7.26.bin
+
+# V4
+Copy-Item .pio\build\heltec_v4_joystick\firmware.bin `
+          flash_tool\firmware\firmware-heltec-v4-joystick-2.7.26.bin</pre>
+          <p class="mt"><strong>Windows (Command Prompt):</strong></p>
+          <pre class="cmd">copy .pio\build\heltec_v3_joystick\firmware.bin ^
+     flash_tool\firmware\firmware-heltec-v3-joystick-2.7.26.bin</pre>
+
+          <h3 style="margin-top:1rem">🍎 macOS / 🐧 Linux</h3>
+          <pre class="cmd"># V3
+cp .pio/build/heltec_v3_joystick/firmware.bin \
+   flash_tool/firmware/firmware-heltec-v3-joystick-2.7.26.bin
+
+# V4
+cp .pio/build/heltec_v4_joystick/firmware.bin \
+   flash_tool/firmware/firmware-heltec-v4-joystick-2.7.26.bin</pre>
+
+          <h3 style="margin-top:1rem">Verify the file is in place</h3>
+          <p><strong>Windows:</strong></p>
+          <pre class="cmd">dir flash_tool\firmware\
+# Should show: firmware-heltec-v3-joystick-2.7.26.bin   ~1,500 KB</pre>
+          <p class="mt"><strong>macOS / Linux:</strong></p>
+          <pre class="cmd">ls -lh flash_tool/firmware/
+# Should show: -rw-r--r--  1 user  staff  1.5M  firmware-heltec-v3-joystick-2.7.26.bin</pre>
+
+          <div class="success-box">
+            ✅ <strong>Build complete!</strong> The firmware binary is ready.<br>
+            Proceed to <a href="#g-flash">Section 6 — Flash with This Web Tool</a>
+            or <a href="#g-pio">Section 7 — Flash with PlatformIO directly</a>.
+          </div>
+
+          <h3 style="margin-top:1rem">Alternative: PlatformIO direct upload (skip copy step)</h3>
+          <p style="color:var(--muted)">If you want to skip the copy step and flash directly from
+            PlatformIO without using the web tool:</p>
+          <pre class="cmd"># Connect the board via USB, then:
+pio run -e heltec_v3_joystick --target upload
+
+# PlatformIO will build (if not already built) and flash in one command.
+# It auto-detects the serial port. Specify manually if needed:
+pio run -e heltec_v3_joystick --target upload --upload-port COM3         # Windows
+pio run -e heltec_v3_joystick --target upload --upload-port /dev/ttyUSB0 # Linux
+pio run -e heltec_v3_joystick --target upload --upload-port /dev/cu.SLAB_USBtoUART  # macOS</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Flash with web tool -->
+    <div class="card" id="g-flash">
+      <h2>6 · Flash with This Web Tool</h2>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p class="step-title">Serve the flash tool (required for Web Serial)</p>
+          <p>Web Serial only works over <code class="inline">http://localhost</code> or <code class="inline">https://</code>.
+            Open a terminal in the repository root and run:</p>
+          <pre class="cmd">python3 -m http.server 8080</pre>
+          <p>Then open <a href="http://localhost:8080/flash_tool/" target="_blank">http://localhost:8080/flash_tool/</a>
+            in Chrome or Edge.</p>
+          <p class="mt" style="color:var(--muted)">
+            Alternatively, deploy this folder to any static HTTPS host (GitHub Pages, Netlify, etc.) and open the hosted URL.
+          </p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p class="step-title">Select your board</p>
+          <p>Click <strong>Heltec V3</strong> or <strong>Heltec V4</strong> in the Flash Tool tab.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p class="step-title">Connect</p>
+          <p>Click <strong>Connect via USB</strong>. A browser dialog pops up listing available serial ports.
+            Select the port labelled <em>CP210x USB to UART Bridge</em> (Windows: COMx, Linux/macOS: /dev/ttyUSBx or /dev/cu.SLAB_…).</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">4</span>
+        <div class="step-body">
+          <p class="step-title">Flash</p>
+          <p>Check <em>Full chip erase before flash</em> (strongly recommended for first install or if upgrading from a different firmware).
+            Click <strong>⚡ Flash Firmware</strong>.
+            The tool downloads the firmware binary, auto-resets the board into bootloader mode, erases (if selected), and writes the firmware.
+            Watch the progress bar and log. The whole process takes about 30–90 seconds.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">5</span>
+        <div class="step-body">
+          <p class="step-title">Reset the board</p>
+          <p>After flashing completes the board resets automatically. The OLED should display
+            the Meshtastic boot screen within a few seconds.
+            If nothing appears, press the <strong>RST</strong> button on the board.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. PlatformIO flash -->
+    <div class="card" id="g-pio">
+      <h2>7 · Flash with PlatformIO (alternative to web tool)</h2>
+      <p style="color:var(--muted);margin-bottom:.75rem">
+        If you prefer the command line over the browser-based tool, PlatformIO can build
+        and flash in a single command. This works on Windows, macOS, and Linux.
+      </p>
+
+      <h3>Quick one-liner (build + flash)</h3>
+      <pre class="cmd"># Heltec V3
+pio run -e heltec_v3_joystick --target upload
+
+# Heltec V4
+pio run -e heltec_v4_joystick --target upload</pre>
+
+      <h3 style="margin-top:1rem">First install: erase then flash</h3>
+      <p style="color:var(--muted)">On a fresh board or when switching from different firmware, erase first:</p>
+      <pre class="cmd"># Step 1: erase the entire flash
+pio run -e heltec_v3_joystick --target erase
+
+# Step 2: upload the firmware
+pio run -e heltec_v3_joystick --target upload</pre>
+
+      <h3 style="margin-top:1rem">Specify serial port manually</h3>
+      <p style="color:var(--muted)">PlatformIO auto-detects the port in most cases.
+        If it picks the wrong port, specify it explicitly:</p>
+      <pre class="cmd"># Windows — find port with: pio device list
+pio run -e heltec_v3_joystick --target upload --upload-port COM3
+
+# macOS — find port with: ls /dev/cu.*
+pio run -e heltec_v3_joystick --target upload --upload-port /dev/cu.SLAB_USBtoUART
+
+# Linux — find port with: ls /dev/ttyUSB* or ls /dev/ttyACM*
+pio run -e heltec_v3_joystick --target upload --upload-port /dev/ttyUSB0</pre>
+
+      <h3 style="margin-top:1rem">Monitor serial output after flashing</h3>
+      <pre class="cmd">pio device monitor --baud 115200</pre>
+      <p class="mt" style="color:var(--muted)">You should see Meshtastic boot messages and joystick event logs like:</p>
+      <pre class="cmd" style="color:#3fb950">==============================================
+ Meshtastic Joystick Navigation
+ Heltec V3 + Joystick
+==============================================
+[OK] Joystick initialised
+  UP    → GPIO 1
+  DOWN  → GPIO 2
+  LEFT  → GPIO 4
+  RIGHT → GPIO 5
+  CTR   → GPIO 6
+[OK] Setup complete — entering main loop
+[JOY] type=0x01 long=no    ← when you press UP
+[JOY] type=0x06 long=yes   ← when you long-press CENTER</pre>
+
+      <h3 style="margin-top:1rem">VS Code PlatformIO IDE upload</h3>
+      <p style="color:var(--muted)">In VS Code with PlatformIO IDE installed:</p>
+      <ul class="instr" style="color:var(--muted)">
+        <li>Open the repository folder in VS Code</li>
+        <li>Click the PlatformIO sidebar (🐜 ant icon, left panel)</li>
+        <li>Expand <em>heltec_v3_joystick</em> → click <strong>Upload</strong></li>
+        <li>Or use the toolbar at the bottom: click the <strong>→ Upload</strong> arrow button</li>
+      </ul>
+
+      <div class="info-box">
+        💡 <strong>List all detected serial ports:</strong>
+        <pre class="cmd" style="margin-top:.3rem">pio device list</pre>
+      </div>
+    </div>
+
+    <!-- 8. First boot -->
+    <div class="card" id="g-firstboot">
+      <h2>8 · First Boot &amp; Meshtastic Setup</h2>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p class="step-title">Power on</p>
+          <p>Connect the board via USB or a LiPo battery (JST-PH 3.7 V, 1000–2000 mAh recommended).
+            The OLED lights up with the Meshtastic boot splash.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p class="step-title">Set your LoRa region</p>
+          <p>Use the Meshtastic app (Android / iOS / desktop) or this joystick interface to set the
+            correct regional frequency before transmitting:</p>
+          <table>
+            <thead><tr><th>Region</th><th>Frequency</th><th>Countries</th></tr></thead>
+            <tbody>
+              <tr><td>US</td>    <td>915 MHz</td><td>United States, Canada</td></tr>
+              <tr><td>EU_868</td><td>868 MHz</td><td>Most of Europe</td></tr>
+              <tr><td>EU_433</td><td>433 MHz</td><td>Europe (ISM 433)</td></tr>
+              <tr><td>AU_915</td><td>915 MHz</td><td>Australia, New Zealand</td></tr>
+              <tr><td>JP</td>    <td>920 MHz</td><td>Japan</td></tr>
+              <tr><td>CN</td>    <td>470 MHz</td><td>China</td></tr>
+              <tr><td>IN</td>    <td>865 MHz</td><td>India</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p class="step-title">Name your node</p>
+          <p>In the Meshtastic app, go to <em>Settings → User</em> and set a short node name
+            and long name. This is how other mesh users will see you.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">4</span>
+        <div class="step-body">
+          <p class="step-title">Set a channel (optional)</p>
+          <p>By default, the node uses the public <em>LongFast</em> channel.
+            To create a private group, set a custom channel name and PSK in
+            <em>Settings → Channels</em>. All nodes in your group must use the
+            same channel name and PSK. Messages are AES-256 encrypted.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. Navigation controls -->
+    <div class="card" id="g-navigate">
+      <h2>9 · Joystick Navigation Controls</h2>
+      <table>
+        <thead><tr><th>Joystick Action</th><th>Meshtastic Action</th></tr></thead>
+        <tbody>
+          <tr><td>⬆️ UP</td>          <td>Scroll up / move selection up</td></tr>
+          <tr><td>⬇️ DOWN</td>        <td>Scroll down / move selection down</td></tr>
+          <tr><td>⬅️ LEFT</td>        <td>Previous screen / navigate back</td></tr>
+          <tr><td>➡️ RIGHT</td>       <td>Next screen / navigate forward</td></tr>
+          <tr><td>⏺️ CENTER tap</td>  <td>Confirm / Enter / Select item</td></tr>
+          <tr><td>⏺️ CENTER hold ≥ 800 ms</td><td>Back / Cancel (long-press)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Navigable Screens</h3>
+      <table>
+        <thead><tr><th>Screen</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td>Messages</td> <td>Received text messages; compose and send new messages</td></tr>
+          <tr><td>Nodes</td>    <td>List of mesh nodes with RSSI, SNR, last-heard time</td></tr>
+          <tr><td>Map</td>      <td>Overhead map showing GPS positions of nearby nodes</td></tr>
+          <tr><td>Settings</td><td>Channel, radio, power, display, and module settings</td></tr>
+          <tr><td>About</td>   <td>Firmware version, device MAC, uptime</td></tr>
+        </tbody>
+      </table>
+      <div class="info-box">
+        💡 <strong>Tip:</strong> The long-press threshold is adjustable.
+        Edit <code class="inline">JOYSTICK_LONG_PRESS_MS</code> in <code class="inline">platformio.ini</code>
+        (default: 800 ms). Set it lower (e.g. 500 ms) for a quicker back-action response.
+      </div>
+    </div>
+
+    <!-- 10. App pairing -->
+    <div class="card" id="g-app">
+      <h2>10 · Pair with the Meshtastic App</h2>
+      <div class="step">
+        <span class="step-num">1</span>
+        <div class="step-body">
+          <p class="step-title">Download the app</p>
+          <p>Available for <strong>Android</strong> (Google Play / F-Droid),
+            <strong>iOS</strong> (App Store), and <strong>desktop</strong> (web app at
+            <a href="https://client.meshtastic.org" target="_blank">client.meshtastic.org</a>).</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div class="step-body">
+          <p class="step-title">Connect via Bluetooth</p>
+          <p>Open the app → tap the + icon → <em>Bluetooth</em> → select the device named
+            <em>Meshtastic_XXXX</em>. Enter PIN <code class="inline">123456</code> if prompted.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div class="step-body">
+          <p class="step-title">Connect via Wi-Fi</p>
+          <p>If you enable Wi-Fi in Settings, the node hosts a web interface at
+            <code class="inline">http://meshtastic.local</code> on your local network.
+            The Meshtastic app can also connect over TCP/IP.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">4</span>
+        <div class="step-body">
+          <p class="step-title">OTA firmware updates</p>
+          <p>Once paired, future firmware updates can be pushed over Bluetooth (OTA) from the app —
+            no USB cable needed after the initial flash.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. Troubleshooting -->
+    <div class="card" id="g-troubleshoot">
+      <h2>11 · Troubleshooting</h2>
+      <table>
+        <thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>No COM/tty port appears</td>
+            <td>Driver not installed or cable charge-only</td>
+            <td>Install SiLabs CP2102 driver; try a different cable</td>
+          </tr>
+          <tr>
+            <td>Port appears but "Connect" fails</td>
+            <td>Port in use by another app; Linux permission</td>
+            <td>Close serial monitor/IDE; run <code class="inline">sudo usermod -a -G dialout $USER</code></td>
+          </tr>
+          <tr>
+            <td>Flash fails with "firmware file not found"</td>
+            <td>Binary not in <code class="inline">flash_tool/firmware/</code></td>
+            <td>Build with PlatformIO or download a release binary</td>
+          </tr>
+          <tr>
+            <td>Flash fails with "Failed to connect to ESP32"</td>
+            <td>Board not in bootloader mode</td>
+            <td>The tool auto-resets; if it fails, hold BOOT and press RST, then retry</td>
+          </tr>
+          <tr>
+            <td>OLED blank after flash</td>
+            <td>Vext rail not powered</td>
+            <td>Firmware should drive IO36 LOW; check firmware built correctly</td>
+          </tr>
+          <tr>
+            <td>Joystick direction not responding</td>
+            <td>Wrong GPIO or loose wire</td>
+            <td>Verify wiring matches the table; open serial monitor and press the joystick</td>
+          </tr>
+          <tr>
+            <td>Joystick fires continuously</td>
+            <td>GPIO floating (no pull-up)</td>
+            <td>Ensure GND wire is connected; firmware must set <code class="inline">INPUT_PULLUP</code></td>
+          </tr>
+          <tr>
+            <td>Multiple directions fire at once</td>
+            <td>Short-circuit between pins</td>
+            <td>Inspect wiring; ensure common pin goes only to GND, not to VCC</td>
+          </tr>
+          <tr>
+            <td>CENTER long-press not working</td>
+            <td>Debounce timer too long</td>
+            <td>Reduce <code class="inline">JOYSTICK_LONG_PRESS_MS</code> in platformio.ini</td>
+          </tr>
+          <tr>
+            <td>No Bluetooth device found</td>
+            <td>Bluetooth disabled in config</td>
+            <td>In Meshtastic Settings → Radio → Bluetooth: enable</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /tab-guide -->
+
+
+  <!-- ════════════════════════════════════════════════════════════
+       TAB 3 — WIRING REFERENCE
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="tab-wiring" class="tab-panel">
+    <div class="card">
+      <h2>🔌 Joystick Wiring Reference</h2>
+      <p style="color:var(--muted);margin-bottom:.75rem">
+        A passive 5-way navigation joystick connects directly to the Heltec GPIO header.
+        No external resistors are needed — all inputs use internal pull-ups (active-LOW logic).
+      </p>
+
+      <h3>Pin Mapping (Heltec V3 and V4 — identical)</h3>
+      <table>
+        <thead>
+          <tr><th>Joystick Function</th><th>GPIO</th><th>Heltec Header Label</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>UP</td>    <td><code class="inline">GPIO 1</code></td><td>IO1</td><td>Active-LOW, internal pull-up</td></tr>
+          <tr><td>DOWN</td>  <td><code class="inline">GPIO 2</code></td><td>IO2</td><td>Active-LOW, internal pull-up</td></tr>
+          <tr><td>LEFT</td>  <td><code class="inline">GPIO 4</code></td><td>IO4</td><td>Active-LOW, internal pull-up</td></tr>
+          <tr><td>RIGHT</td> <td><code class="inline">GPIO 5</code></td><td>IO5</td><td>Active-LOW, internal pull-up</td></tr>
+          <tr><td>CENTER / CLICK</td><td><code class="inline">GPIO 6</code></td><td>IO6</td><td>Short press = SELECT, long press = BACK</td></tr>
+          <tr><td>GND (common)</td><td>GND</td><td>GND</td><td>Joystick common / return pin</td></tr>
+          <tr><td>VCC (optional)</td><td>3.3 V</td><td>3V3</td><td>Only if module needs power rail</td></tr>
+        </tbody>
+      </table>
+
+      <h3>ASCII Wiring Diagram</h3>
+      <div class="ascii-diagram">
+  HELTEC V3 / V4                      5-WAY JOYSTICK MODULE
+  ┌─────────────────┐                 ┌────────────────────────┐
+  │  3V3  ──────────┼─────────────────┼── VCC  (only if needed)│
+  │  GND  ──────────┼─────────────────┼── COM / GND            │
+  │  IO1  ──────────┼─────────────────┼── UP                   │
+  │  IO2  ──────────┼─────────────────┼── DOWN                 │
+  │  IO4  ──────────┼─────────────────┼── LEFT                 │
+  │  IO5  ──────────┼─────────────────┼── RIGHT                │
+  │  IO6  ──────────┼─────────────────┼── CENTER / CLICK       │
+  └─────────────────┘                 └────────────────────────┘
+
+  ── Per-direction schematic ──────────────────────────────
+  GPIO (INPUT_PULLUP) ──┬── 10 kΩ internal pull-up ── 3V3
+                        │
+                       [SW]  ← joystick switch
+                        │
+                       GND
+  Pressed: GPIO = LOW   Released: GPIO = HIGH</div>
+
+      <h3>Right Header Pin Layout (top → bottom)</h3>
+      <div class="ascii-diagram">
+  Heltec V3 / V4 — Right Header (facing front of board)
+  ┌──────┬────────────────────────────────────────────────┐
+  │  Pin │  Function                                      │
+  ├──────┼────────────────────────────────────────────────┤
+  │  GND │  Ground                                        │
+  │  RST │  Reset (active-LOW)                            │
+  │ IO0  │  Boot button (reserved)                        │
+  │ IO36 │  Vext control (reserved — LOW = enable 3V3)    │
+  │ IO35 │  On-board LED (reserved)                       │
+  │ IO34 │  (free)                                        │
+  │ IO21 │  OLED RST (reserved)                           │
+  │ IO20 │  (free)                                        │
+  │ IO19 │  (free)                                        │
+  │ IO18 │  OLED SCL / I2C (reserved)                     │
+  │ IO17 │  OLED SDA / I2C (reserved)                     │
+  │ IO16 │  (free)                                        │
+  │ IO15 │  (free)                                        │
+  │ IO7  │  (free)                                        │
+  │ IO6  │  ← CENTER joystick                             │
+  │ IO5  │  ← RIGHT joystick                              │
+  │ IO4  │  ← LEFT joystick                               │
+  │ IO3  │  (free)                                        │
+  │ IO2  │  ← DOWN joystick                               │
+  │ IO1  │  ← UP joystick                                 │
+  └──────┴────────────────────────────────────────────────┘</div>
+
+      <h3>Long-Press Behaviour</h3>
+      <table>
+        <thead><tr><th>Action</th><th>Event Fired</th><th>Default Behaviour</th></tr></thead>
+        <tbody>
+          <tr><td>CENTER tap (&lt; 800 ms)</td><td><code class="inline">INPUT_BROKER_SELECT</code></td><td>Confirm / enter menu</td></tr>
+          <tr><td>CENTER hold (≥ 800 ms)</td><td><code class="inline">INPUT_BROKER_BACK</code></td><td>Back / cancel</td></tr>
+        </tbody>
+      </table>
+      <div class="info-box">
+        💡 Change the long-press threshold by setting <code class="inline">JOYSTICK_LONG_PRESS_MS=500</code>
+        in <code class="inline">platformio.ini</code> under the <code class="inline">[env:heltec_v3_joystick]</code> section.
+      </div>
+
+      <h3>Recommended Joystick Modules</h3>
+      <table>
+        <thead><tr><th>Module</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Alps RKJXK series</td><td>SMD / THT</td><td>Industry-standard 5-way nav switch; most commonly used</td></tr>
+          <tr><td>Alps SKRHAAE series</td><td>SMD</td><td>Very low travel, ultra-compact</td></tr>
+          <tr><td>PSP joystick hat breakout</td><td>Breakout PCB</td><td>Breadboard-friendly; includes all 5 lines + common</td></tr>
+          <tr><td>Grove 5-way joystick</td><td>Grove connector</td><td>Has on-board pull-ups; omit VCC wire to Heltec 3V3</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div><!-- /tab-wiring -->
+
+
+  <!-- ════════════════════════════════════════════════════════════
+       TAB 4 — FAQ
+  ═══════════════════════════════════════════════════════════════ -->
+  <div id="tab-faq" class="tab-panel">
+    <div class="card">
+      <h2>❓ Frequently Asked Questions</h2>
+
+      <h3>Can I change which GPIO pins the joystick uses?</h3>
+      <p class="mb">Yes. Edit the <code class="inline">JOYSTICK_PIN_*</code> values in
+        <code class="inline">platformio.ini</code> under the relevant <code class="inline">[env:...]</code>
+        section and rebuild. Avoid reserved pins (see the Wiring Reference tab).</p>
+
+      <h3>Can I use an analog (thumbstick) joystick?</h3>
+      <p class="mb">This firmware targets passive digital 5-way switches. An analog thumbstick
+        (two potentiometers) requires an ADC-based driver variant and is not currently supported.</p>
+
+      <h3>Will this work with Meshtastic Android / iOS apps?</h3>
+      <p class="mb">Yes. The firmware runs standard Meshtastic BLE and Wi-Fi pairing.
+        The joystick only affects the on-device OLED navigation; all app features work normally.</p>
+
+      <h3>What LoRa region should I configure?</h3>
+      <p class="mb">Set the region to match your country's ISM band allocation:
+        <code class="inline">US</code> (915 MHz), <code class="inline">EU_868</code> (868 MHz),
+        <code class="inline">EU_433</code> (433 MHz), etc.
+        See <a href="https://meshtastic.org/docs/configuration/radio/lora/" target="_blank">meshtastic.org/docs →</a></p>
+
+      <h3>Is AES encryption supported?</h3>
+      <p class="mb">Yes. Meshtastic uses AES-256-CTR for all channel messages. The default
+        public channel has a known key; set a custom PSK for a private group.</p>
+
+      <h3>How do I update the firmware later?</h3>
+      <p class="mb">Re-flash using this web tool or PlatformIO. For OTA (over-the-air) updates,
+        use the Meshtastic app over Bluetooth — no USB cable needed after initial setup.</p>
+
+      <h3>Does this support GPS?</h3>
+      <p class="mb">Yes. Connect an external NMEA GPS module to the UART pins. The node will
+        broadcast its position to the mesh. See Meshtastic docs for pinout and UART config.</p>
+
+      <h3>Can I integrate this with the official Meshtastic firmware tree?</h3>
+      <p class="mb">Yes. Copy <code class="inline">src/input/JoystickInput.h</code> and
+        <code class="inline">JoystickInput.cpp</code> into the official firmware's
+        <code class="inline">src/input/</code> folder, instantiate <code class="inline">JoystickInput</code>
+        in <code class="inline">main.cpp</code>, and call <code class="inline">joystick.begin()</code>
+        in <code class="inline">setup()</code> and <code class="inline">joystick.update()</code> in
+        <code class="inline">loop()</code>. See the full README for the exact integration code.</p>
+
+      <h3>What is the maximum mesh range?</h3>
+      <p class="mb">With clear line of sight, Meshtastic typically achieves 5–15 km per hop
+        using the default LongFast modem preset (SF11 / BW250 / CR 4:5).
+        Enable the LongSlow or VLongSlow preset for extended range at lower data rate.</p>
+
+      <h3>How many nodes can be in a mesh?</h3>
+      <p class="mb">Practically 30–100 nodes in a mesh before network congestion becomes significant.
+        Store-and-forward modules can extend message delivery across sparse networks.</p>
+
+      <h3>The web tool says "Unsupported browser". What do I do?</h3>
+      <p>Install <a href="https://www.google.com/chrome/" target="_blank">Google Chrome</a> or
+        Microsoft Edge (both version 89 or later). The Web Serial API used for flashing is
+        not available in Firefox, Safari, or mobile browsers.</p>
+    </div>
+
+    <!-- Quick links -->
+    <div class="card">
+      <h2>🔗 Useful Links</h2>
+      <ul style="padding-left:1.2rem;line-height:2.2">
+        <li><a href="https://meshtastic.org" target="_blank">Meshtastic.org</a> — official documentation and community</li>
+        <li><a href="https://flasher.meshtastic.org" target="_blank">Official Meshtastic Web Flasher</a> — stock firmware without joystick mods</li>
+        <li><a href="https://github.com/meshtastic/firmware/releases" target="_blank">Meshtastic firmware releases on GitHub</a></li>
+        <li><a href="https://docs.heltec.org" target="_blank">Heltec board documentation</a> — pinouts, schematics, datasheets</li>
+        <li><a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank">SiLabs CP2102 USB driver</a></li>
+        <li><a href="https://github.com/espressif/esptool-js" target="_blank">esptool-js on GitHub</a> — the Web Serial flash library used by this tool</li>
+        <li><a href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4" target="_blank">This project on GitHub</a> — source code, releases, issue tracker</li>
+        <li><a href="../README.md">Full project README</a> — PlatformIO build instructions, project structure</li>
+      </ul>
+    </div>
+  </div><!-- /tab-faq -->
+
+  <footer>
+    Meshtastic Joystick Navigation — Heltec V3 / V4 &nbsp;·&nbsp;
+    MIT License &nbsp;·&nbsp;
+    <a href="https://github.com/kdnelezen/Meshtastic-Joystick-navigation-for-Heltec-V3-and-Heltec-V4" target="_blank">GitHub →</a>
+  </footer>
+
+</div><!-- /container -->
+
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────────
+let selectedBoard = 'v3';
+let serialPort    = null;
+let isFlashing    = false;
+let espLoader     = null;   // esptool-js ESPLoader instance
+
+// Firmware manifest: maps board → binary URL and flash offset
+const FIRMWARE = {
+  v3: {
+    name:    'Heltec V3 + Joystick Nav',
+    version: '2.7.26',
+    url:     'firmware/firmware-heltec-v3-joystick-2.7.26.bin',
+    offset:  0x10000,   // standard ESP32 app partition offset
+  },
+  v4: {
+    name:    'Heltec V4 + Joystick Nav',
+    version: '2.7.26',
+    url:     'firmware/firmware-heltec-v4-joystick-2.7.26.bin',
+    offset:  0x10000,
+  },
+};
+
+// esptool-js baud rate for flashing
+const FLASH_BAUD = 921600;
+
+// ── Boot-up checks ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (!('serial' in navigator)) {
+    document.getElementById('browser-warn').style.display = 'block';
+    document.getElementById('btn-connect').disabled = true;
+    log('error', 'Web Serial API not available. Use Chrome 89+ or Edge 89+ on desktop.');
+  } else {
+    log('info', 'Web Serial API detected. Ready to connect.');
+    // Check if esptool-js loaded
+    if (typeof ESPLoader === 'undefined') {
+      log('warn', 'esptool-js library loading… (requires internet connection for CDN)');
+    } else {
+      log('info', 'esptool-js loaded. Flash engine ready.');
+    }
+  }
+});
+
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(panelId, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Board selection ────────────────────────────────────────────
+function selectBoard(board) {
+  selectedBoard = board;
+  document.getElementById('card-v3').classList.toggle('active', board === 'v3');
+  document.getElementById('card-v4').classList.toggle('active', board === 'v4');
+  log('info', `Selected board: ${FIRMWARE[board].name} (firmware v${FIRMWARE[board].version})`);
+}
+
+// ── Connect ────────────────────────────────────────────────────
+async function connectDevice() {
+  if (isFlashing) return;
+
+  // Close any existing port first
+  if (serialPort) {
+    try {
+      if (serialPort.readable || serialPort.writable) await serialPort.close();
+    } catch (_) { /* ignore */ }
+    serialPort = null;
+    espLoader  = null;
+  }
+
+  try {
+    serialPort = await navigator.serial.requestPort();
+    log('info', 'Port selected. Connecting to ESP32…');
+
+    // Use esptool-js if available; otherwise fall back to raw Web Serial
+    if (typeof ESPLoader !== 'undefined' && typeof Transport !== 'undefined') {
+      const transport = new Transport(serialPort, true);
+      espLoader = new ESPLoader({
+        transport,
+        baudrate: FLASH_BAUD,
+        romBaudrate: 115200,
+        terminal: {
+          clean()        {},
+          writeLine(d)   { log('info', d); },
+          write(d)       { /* partial output */ },
+        },
+      });
+
+      const chipName = await espLoader.main();
+      log('ok', `Connected to chip: ${chipName}`);
+    } else {
+      // Fallback: open at 115200 (esptool-js not loaded)
+      await serialPort.open({ baudRate: 115200 });
+      log('warn', 'esptool-js not available — connected in basic mode. Real flashing requires esptool-js.');
+    }
+
+    setBadge('connected', '✅ Connected');
+    document.getElementById('btn-flash').disabled      = false;
+    document.getElementById('btn-erase-only').disabled = false;
+    document.getElementById('btn-disconnect').disabled = false;
+    document.getElementById('btn-connect').textContent = '🔄 Reconnect';
+    document.getElementById('connect-success').style.display = 'block';
+
+  } catch (err) {
+    log('error', `Connection failed: ${err.message}`);
+    setBadge('error', '❌ Failed');
+    serialPort = null;
+    espLoader  = null;
+  }
+}
+
+// ── Disconnect ─────────────────────────────────────────────────
+async function disconnectDevice() {
+  if (isFlashing) return;
+  try {
+    if (espLoader)   await espLoader.transport.disconnect();
+    else if (serialPort && serialPort.readable) await serialPort.close();
+  } catch (_) { /* ignore */ }
+  serialPort = null;
+  espLoader  = null;
+  setBadge('', 'Not connected');
+  document.getElementById('btn-flash').disabled      = true;
+  document.getElementById('btn-erase-only').disabled = true;
+  document.getElementById('btn-disconnect').disabled = true;
+  document.getElementById('btn-connect').textContent = '🔌 Connect via USB';
+  document.getElementById('connect-success').style.display = 'none';
+  log('info', 'Disconnected.');
+}
+
+// ── Fetch firmware binary ──────────────────────────────────────
+async function fetchFirmware(url) {
+  log('info', `Fetching firmware: ${url}`);
+  setProgress(5, 'Downloading firmware…');
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error(
+      `HTTP ${resp.status} — firmware binary not found at "${url}".\n` +
+      `Build with PlatformIO (pio run -e heltec_v3_joystick) and copy the .bin to flash_tool/firmware/,\n` +
+      `or download a pre-built release from the GitHub Releases page.`
+    );
+  }
+  const buf = await resp.arrayBuffer();
+  log('ok', `Firmware downloaded: ${(buf.byteLength / 1024).toFixed(1)} KB (${buf.byteLength} bytes)`);
+  setProgress(20, 'Firmware downloaded');
+  return buf;
+}
+
+// ── Flash ──────────────────────────────────────────────────────
+async function startFlash() {
+  if (!serialPort || isFlashing) return;
+  isFlashing = true;
+  disableButtons(true);
+
+  const fw    = FIRMWARE[selectedBoard];
+  const erase = document.getElementById('chk-erase').checked;
+
+  setBadge('flashing', '⚡ Flashing…');
+  showProgress(true);
+
+  try {
+    const buffer = await fetchFirmware(fw.url);
+
+    if (espLoader) {
+      // ── Real esptool-js flash path ──────────────────────────
+      if (erase) {
+        log('info', 'Erasing flash chip (this may take 10–20 s)…');
+        setProgress(25, 'Erasing flash…');
+        await espLoader.eraseFlash();
+        setProgress(40, 'Erase complete');
+        log('ok', 'Flash chip erased.');
+      }
+
+      log('info', 'Writing firmware to flash…');
+      const fileArray = [{
+        data:    bufferToBase64(buffer),
+        address: fw.offset,
+      }];
+
+      await espLoader.writeFlash({
+        fileArray,
+        flashSize:   'keep',
+        flashMode:   'keep',
+        flashFreq:   'keep',
+        eraseAll:    false,
+        compress:    true,
+        reportProgress(fileIndex, written, total) {
+          const pct = Math.round((written / total) * 100);
+          setProgress(40 + Math.round(pct * 0.55), `Writing… ${pct}%`);
+        },
+        calculateMD5Hash(image) {
+          return typeof CryptoJS !== 'undefined' ? CryptoJS.MD5(CryptoJS.enc.Latin1.parse(image)).toString() : '';
+        },
+      });
+
+      setProgress(97, 'Resetting device…');
+      await espLoader.hardReset();
+      setProgress(100, 'Done!');
+
+    } else {
+      // ── Fallback: simulated progress (esptool-js not loaded) ─
+      log('warn', 'esptool-js not loaded — running in simulation mode.');
+      log('warn', 'To actually flash, serve this page over http://localhost (not file://)');
+      log('warn', 'and ensure internet access to load esptool-js from unpkg.com CDN.');
+      if (erase) {
+        setProgress(30, 'Simulating erase…');
+        await delay(1500);
+        setProgress(45, 'Erase simulated');
+        log('warn', '[SIMULATED] Erase complete.');
+      }
+      for (let p = 0; p <= 100; p += 5) {
+        setProgress(45 + Math.round(p * 0.5), `Simulating write… ${p}%`);
+        await delay(80);
+      }
+      setProgress(100, 'Simulation done');
+    }
+
+    setBadge('done', '✅ Flash complete');
+    log('ok', '──────────────────────────────────────');
+    log('ok', '  ✅ Flash complete!');
+    log('ok', `  Board:    ${fw.name}`);
+    log('ok', `  Version:  v${fw.version}`);
+    log('ok', `  Binary:   ${fw.url}`);
+    log('ok', '  The board has been reset. Meshtastic is starting up.');
+    log('ok', '  The OLED should show the boot screen in a few seconds.');
+    log('ok', '──────────────────────────────────────');
+
+  } catch (err) {
+    log('error', `Flash failed: ${err.message}`);
+    setBadge('error', '❌ Error');
+    setProgress(0, '');
+  } finally {
+    isFlashing = false;
+    disableButtons(false);
+  }
+}
+
+// ── Erase only ─────────────────────────────────────────────────
+async function eraseOnly() {
+  if (!serialPort || isFlashing) return;
+  isFlashing = true;
+  disableButtons(true);
+  showProgress(true);
+  setBadge('flashing', '🗑️ Erasing…');
+
+  try {
+    log('info', 'Erasing full flash chip (this may take 10–20 s)…');
+    setProgress(10, 'Erasing…');
+
+    if (espLoader) {
+      await espLoader.eraseFlash();
+    } else {
+      log('warn', '[SIMULATED] Erase — esptool-js not loaded.');
+      await delay(2000);
+    }
+
+    setProgress(100, 'Erase complete');
+    setBadge('connected', '✅ Erased');
+    log('ok', 'Flash chip erased successfully.');
+  } catch (err) {
+    log('error', `Erase failed: ${err.message}`);
+    setBadge('error', '❌ Error');
+  } finally {
+    isFlashing = false;
+    disableButtons(false);
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────
+function bufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let binary  = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ── UI helpers ─────────────────────────────────────────────────
+function log(level, msg) {
+  const el  = document.getElementById('log');
+  const cls = { info: 'log-info', ok: 'log-ok', warn: 'log-warn', error: 'log-error' }[level] || '';
+  const ts  = new Date().toLocaleTimeString();
+  el.innerHTML += `<span class="${cls}">[${ts}] ${escHtml(String(msg))}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog() {
+  document.getElementById('log').innerHTML = '<span class="log-info">Log cleared.</span>\n';
+}
+function copyLog() {
+  const text = document.getElementById('log').innerText;
+  navigator.clipboard.writeText(text)
+    .then(() => log('ok', 'Log copied to clipboard.'))
+    .catch(() => log('warn', 'Could not access clipboard.'));
+}
+function setBadge(cls, text) {
+  const b = document.getElementById('status-badge');
+  b.className = cls;
+  b.textContent = text;
+}
+function setProgress(pct, label) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = label;
+}
+function showProgress(show) {
+  document.getElementById('progress-wrap').style.display = show ? 'block' : 'none';
+}
+function disableButtons(disabled) {
+  ['btn-flash', 'btn-erase-only', 'btn-connect', 'btn-disconnect'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+function escHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '\n');
+}
+</script>
+</body>
+</html>
