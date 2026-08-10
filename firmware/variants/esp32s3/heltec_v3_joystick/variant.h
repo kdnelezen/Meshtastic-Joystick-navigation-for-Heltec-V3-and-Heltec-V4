@@ -30,20 +30,16 @@
 #define BOARD_NAME "Heltec V3 + Joystick"
 
 // ── 5-way joystick ───────────────────────────────────────────
-// HAS_TRACKBALL selects the upstream TrackballInterruptBase driver.  Despite
-// the name, that driver is a generic 5-way directional input source that
-// feeds the InputBroker UP/DOWN/LEFT/RIGHT/SELECT/SELECT_LONG events.
-#define HAS_TRACKBALL 1
+// Activate the custom JoystickInput driver.
+#define HAS_JOYSTICK 1
 
 // Joystick GPIOs (active LOW, internal pull-up enabled by driver).
-#define TB_UP    1
-#define TB_DOWN  2
-#define TB_LEFT  4
-#define TB_RIGHT 5
-#define TB_PRESS 6
+#define JOYSTICK_PIN_UP    1
+#define JOYSTICK_PIN_DOWN  2
+#define JOYSTICK_PIN_LEFT  4
+#define JOYSTICK_PIN_RIGHT 5
+#define JOYSTICK_PIN_CENTER 6
 
-// Interrupt edge: FALLING because the switch pulls the line to GND.
-#define TB_DIRECTION FALLING
-
-// Number of pulses required before an event fires.  0 = fire on first pulse.
-#define TB_THRESHOLD 0
+// Debounce and long-press timing.
+#define JOYSTICK_DEBOUNCE_MS   50
+#define JOYSTICK_LONG_PRESS_MS 800

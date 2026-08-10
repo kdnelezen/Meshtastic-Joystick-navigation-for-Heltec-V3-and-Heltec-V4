@@ -35,17 +35,15 @@
 #define BOARD_NAME "Heltec V4 + Joystick"
 
 // ── 5-way joystick ───────────────────────────────────────────
-#define HAS_TRACKBALL 1
+#define HAS_JOYSTICK 1
 
 // Joystick GPIOs (active LOW, internal pull-up enabled by driver).
-#define TB_UP    15
-#define TB_DOWN  16
-#define TB_LEFT  19
-#define TB_RIGHT 20
-#define TB_PRESS 6
+#define JOYSTICK_PIN_UP     15
+#define JOYSTICK_PIN_DOWN   16
+#define JOYSTICK_PIN_LEFT   19
+#define JOYSTICK_PIN_RIGHT  20
+#define JOYSTICK_PIN_CENTER 6
 
-// Interrupt edge: FALLING because the switch pulls the line to GND.
-#define TB_DIRECTION FALLING
-
-// Number of pulses required before an event fires.  0 = fire on first pulse.
-#define TB_THRESHOLD 0
+// Debounce and long-press timing.
+#define JOYSTICK_DEBOUNCE_MS   50
+#define JOYSTICK_LONG_PRESS_MS 800

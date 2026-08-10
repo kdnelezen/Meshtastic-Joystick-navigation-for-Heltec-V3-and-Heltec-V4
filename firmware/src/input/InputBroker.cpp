@@ -17,6 +17,7 @@
 
 #if !MESHTASTIC_EXCLUDE_INPUTBROKER
 #include "input/ExpressLRSFiveWay.h"
+#include "input/JoystickInput.h"
 #include "input/RotaryEncoderImpl.h"
 #include "input/RotaryEncoderInterruptImpl1.h"
 #include "input/SerialKeyboardImpl.h"
@@ -501,6 +502,13 @@ void InputBroker::Init()
     if (config.display.displaymode != meshtastic_Config_DisplayConfig_DisplayMode_COLOR) {
         trackballInterruptImpl1 = new TrackballInterruptImpl1();
         trackballInterruptImpl1->init(TB_DOWN, TB_UP, TB_LEFT, TB_RIGHT, TB_PRESS);
+    }
+#endif
+#if !MESHTASTIC_EXCLUDE_INPUTBROKER && defined(HAS_JOYSTICK)
+    if (config.display.displaymode != meshtastic_Config_DisplayConfig_DisplayMode_COLOR) {
+        joystickInput = new JoystickInput();
+        joystickInput->init();
+        inputBroker->registerSource(joystickInput);
     }
 #endif
 #ifdef INPUTBROKER_EXPRESSLRSFIVEWAY_TYPE
